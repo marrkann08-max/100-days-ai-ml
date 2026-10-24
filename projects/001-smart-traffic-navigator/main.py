@@ -1,5 +1,7 @@
 
 import turtle
+import csv
+from pathlib import Path
 
 city = {
     "A": (-150, 0),
@@ -113,11 +115,40 @@ car_state = {
     "progress": 0.0
 }
 
+log_file = Path(__file__).with_name("traffic_experiments.csv")
+
+def log_experiment(route, best_time):
+    new_file = not log_file.exists()
+
+    with open(log_file, "a", newline="", encoding="utf-8") as file:
+        writer = csv.writer(file)
+
+        if new_file:
+            writer.writerow([
+                "traffic_condition",
+                "road_AE_minutes",
+                "fastest_route",
+                "route_time_minutes"
+            ])
+
+        if traffic_active:
+            condition = "Congested"
+        else:
+            condition = "Normal"
+
+        writer.writerow([
+            condition,
+            travel_times[("E", "A")],
+            " -> ".join(route),
+            best_time
+        ])
 
 def draw_city():
     graph = build_graph()
 
     route, best_time = find_fastest_route(graph, "A", "D")
+
+    log_experiment(route, best_time)
 
     car_state["route"] = route
     car_state["segment"] = 0

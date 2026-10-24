@@ -1,0 +1,10 @@
+traffic_condition,road_AE_minutes,fastest_route,route_time_minutes
+Normal,6,A -> E -> D,10
+Congested,15,A -> B -> C -> D,12
+Normal,6,A -> E -> D,10
+Congested,15,A -> B -> C -> D,12
+Normal,6,A -> E -> D,10
+Congested,15,A -> B -> C -> D,12
+Normal,6,A -> E -> D,10
+Congested,15,A -> B -> C -> D,12
+Normal,6,A -> E -> D,10
