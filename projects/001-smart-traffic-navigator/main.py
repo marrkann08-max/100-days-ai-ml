@@ -15,7 +15,32 @@ roads = [
 ]
 for start, end in roads:
     print (start, "connects to", end)
+travel_times = {
+    ("A", "B"): 4,
+    ("B", "C"): 5,
+    ("C", "D"): 3,
+    ("D", "E"): 4,
+    ("E", "A"): 6
+}
+route1 = (
+    travel_times[("A", "B")]
+    + travel_times[("B", "C")]
+    + travel_times[("C", "D")]
+)
+route2 = (
+    travel_times[("E", "A")]
+    + travel_times[("D", "E")]
+)
+print("Route 1 takes:", route1, "minutes")
+print("Route 2 takes:", route2, "minutes")
+if route1 < route2:
+    print("Route 1 is faster")
 
+elif route2 < route1:
+    print("Route 2 is faster")
+
+else:
+    print("Both routes take the same time")
 
 import turtle
 Screen = turtle.Screen()
