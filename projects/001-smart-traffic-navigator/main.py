@@ -99,7 +99,20 @@ pen = turtle.Turtle()
 pen.speed(0)
 pen.hideturtle()
 
+car = turtle.Turtle()
+car.shape("circle")
+car.color("yellow")
+car.shapesize(0.8)
+car.penup()
+car.speed(0)
+
 traffic_active = False
+
+car_state = {
+    "route": [],
+    "segment": 0,
+    "progress": 0.0
+}
 
 
 def draw_city():
@@ -107,8 +120,17 @@ def draw_city():
 
     route, best_time = find_fastest_route(graph, "A", "D")
 
-    pen.clear()
+    car_state["route"] = route
+    car_state["segment"] = 0
+    car_state["progress"] = 0.0
 
+    if route:
+        car.showturtle()
+        car.goto(city[route[0]])
+    else:
+        car.hideturtle()
+
+    pen.clear()
     pen.pensize(7)
 
     for start, end in roads:
@@ -142,6 +164,7 @@ def draw_city():
 
         pen.goto(x, y - 10)
         pen.color("black")
+
         pen.write(
             name,
             align="center",
@@ -200,10 +223,40 @@ def toggle_traffic():
     draw_city()
 
 
+def move_car():
+    route = car_state["route"]
+    segment = car_state["segment"]
+
+    if segment < len(route) - 1:
+        start = route[segment]
+        end = route[segment + 1]
+
+        x1, y1 = city[start]
+        x2, y2 = city[end]
+
+        progress = min(1.0, car_state["progress"] + 0.02)
+
+        x = x1 + (x2 - x1) * progress
+        y = y1 + (y2 - y1) * progress
+
+        car.goto(x, y)
+
+        if progress >= 1.0:
+            car_state["segment"] += 1
+            car_state["progress"] = 0.0
+        else:
+            car_state["progress"] = progress
+
+    screen.update()
+    screen.ontimer(move_car, 40)
+
+
 draw_city()
 
 screen.onkey(toggle_traffic, "t")
 screen.onkey(toggle_traffic, "T")
 screen.listen()
+
+move_car()
 
 screen.mainloop()
