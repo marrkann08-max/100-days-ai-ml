@@ -11,7 +11,6 @@ roads = [
     ("C", "D"),
     ("D", "E"),
     ("E", "A"),
-    
 ]
 for start, end in roads:
     print (start, "connects to", end)
@@ -31,6 +30,33 @@ route2 = (
     travel_times[("E", "A")]
     + travel_times[("D", "E")]
 )
+
+# Create an empty graph
+graph = {}
+
+# Add every intersection
+for intersection in city:
+    graph[intersection] = []
+
+# Add roads and travel times
+for (start, end), minutes in travel_times.items():
+    graph[start].append((end, minutes))
+    graph[end].append((start, minutes))
+
+print(graph["A"])
+distances = {}
+
+for intersection in city:
+    distances[intersection] = float("inf")
+distances["A"] = 0
+current = "A"
+
+for neighbor, minutes in graph[current]:
+    new_distance = distances[current] + minutes
+
+    if new_distance < distances[neighbor]:
+        distances[neighbor] = new_distance
+print(distances)
 print("Route 1 takes:", route1, "minutes")
 print("Route 2 takes:", route2, "minutes")
 if route1 < route2:
@@ -70,7 +96,5 @@ for name, (x, y) in city.items():
     pen.color("black")
     pen.write(name, align="center",
               font=("Arial", 12, "bold"))
-
-
 Screen.mainloop()
 
