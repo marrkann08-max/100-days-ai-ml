@@ -75,11 +75,10 @@ def find_fastest_route(graph, source, destination):
                     distances[neighbor] = new_distance
                     previous[neighbor] = current
 
-    route = []
-
     if distances[destination] == float("inf"):
         return [], float("inf")
 
+    route = []
     current = destination
 
     while current is not None:
@@ -234,7 +233,17 @@ def move_car():
         x1, y1 = city[start]
         x2, y2 = city[end]
 
-        progress = min(1.0, car_state["progress"] + 0.02)
+        road = (start, end)
+
+        if road not in travel_times:
+            road = (end, start)
+
+        minutes = travel_times[road]
+
+        progress = min(
+            1.0,
+            car_state["progress"] + 0.1 / minutes
+        )
 
         x = x1 + (x2 - x1) * progress
         y = y1 + (y2 - y1) * progress
