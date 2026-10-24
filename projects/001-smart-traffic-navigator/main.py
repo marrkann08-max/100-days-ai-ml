@@ -1,4 +1,6 @@
+
 import turtle
+
 city = {
     "A": (-150, 0),
     "B": (0, 100),
@@ -6,6 +8,7 @@ city = {
     "D": (150, 0),
     "E": (0, 0)
 }
+
 roads = [
     ("A", "B"),
     ("B", "C"),
@@ -13,6 +16,7 @@ roads = [
     ("D", "E"),
     ("E", "A")
 ]
+
 travel_times = {
     ("A", "B"): 4,
     ("B", "C"): 5,
@@ -20,55 +24,62 @@ travel_times = {
     ("D", "E"): 4,
     ("E", "A"): 6
 }
+
+traffic = input("Simulate traffic jam? (yes/no): ").strip().lower()
+
+if traffic == "yes":
+    travel_times[("E", "A")] = 15
+    print("Traffic jam activated!")
+else:
+    print("Normal traffic conditions.")
+
 graph = {}
 
 for intersection in city:
     graph[intersection] = []
+
 for (start, end), minutes in travel_times.items():
     graph[start].append((end, minutes))
     graph[end].append((start, minutes))
-source = "A"
-destination = "D"
 
-distances = {}
-previous = {}
-visited = set()
 
-for intersection in city:
-    distances[intersection] = float("inf")
-    previous[intersection] = None
-
-distances[source] = 0
-
-while len(visited) < len(graph):
-
-    current = None
-    smallest_time = float("inf")
+def find_fastest_route(graph, source, destination):
+    distances = {}
+    previous = {}
+    visited = set()
 
     for intersection in graph:
-        if intersection not in visited and distances[intersection] < smallest_time:
-            smallest_time = distances[intersection]
-            current = intersection
+        distances[intersection] = float("inf")
+        previous[intersection] = None
 
-    if current is None:
-        break
+    distances[source] = 0
 
-    visited.add(current)
+    while len(visited) < len(graph):
+        current = None
+        smallest_time = float("inf")
 
-    print("Exploring:", current)
+        for intersection in graph:
+            if intersection not in visited and distances[intersection] < smallest_time:
+                smallest_time = distances[intersection]
+                current = intersection
 
-    for neighbor, minutes in graph[current]:
+        if current is None:
+            break
 
-        if neighbor not in visited:
-            new_distance = distances[current] + minutes
+        visited.add(current)
 
-            if new_distance < distances[neighbor]:
-                distances[neighbor] = new_distance
-                previous[neighbor] = current
+        for neighbor, minutes in graph[current]:
+            if neighbor not in visited:
+                new_distance = distances[current] + minutes
 
-route = []
+                if new_distance < distances[neighbor]:
+                    distances[neighbor] = new_distance
+                    previous[neighbor] = current
 
-if distances[destination] != float("inf"):
+    route = []
+
+    if distances[destination] == float("inf"):
+        return [], float("inf")
 
     current = destination
 
@@ -76,11 +87,13 @@ if distances[destination] != float("inf"):
         route.insert(0, current)
         current = previous[current]
 
-    print("Fastest route:", " -> ".join(route))
-    print("Total time:", distances[destination], "minutes")
+    return route, distances[destination]
 
-else:
-    print("No route found!")
+
+route, best_time = find_fastest_route(graph, "A", "D")
+
+print("Fastest route:", " -> ".join(route))
+print("Total time:", best_time, "minutes")
 
 screen = turtle.Screen()
 screen.setup(700, 450)
@@ -99,21 +112,24 @@ for start, end in roads:
     pen.goto(city[start])
     pen.pendown()
     pen.goto(city[end])
-    
+
 pen.color("lime")
 pen.pensize(11)
 
 for i in range(len(route) - 1):
     start = route[i]
     end = route[i + 1]
+
     pen.penup()
     pen.goto(city[start])
     pen.pendown()
     pen.goto(city[end])
+
 for name, (x, y) in city.items():
     pen.penup()
     pen.goto(x, y)
     pen.dot(40, "skyblue")
+
     pen.goto(x, y - 10)
     pen.color("black")
     pen.write(
@@ -121,4 +137,5 @@ for name, (x, y) in city.items():
         align="center",
         font=("Arial", 12, "bold")
     )
+
 screen.mainloop()
