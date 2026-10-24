@@ -25,22 +25,18 @@ travel_times = {
     ("E", "A"): 6
 }
 
-traffic = input("Simulate traffic jam? (yes/no): ").strip().lower()
 
-if traffic == "yes":
-    travel_times[("E", "A")] = 15
-    print("Traffic jam activated!")
-else:
-    print("Normal traffic conditions.")
+def build_graph():
+    graph = {}
 
-graph = {}
+    for intersection in city:
+        graph[intersection] = []
 
-for intersection in city:
-    graph[intersection] = []
+    for (start, end), minutes in travel_times.items():
+        graph[start].append((end, minutes))
+        graph[end].append((start, minutes))
 
-for (start, end), minutes in travel_times.items():
-    graph[start].append((end, minutes))
-    graph[end].append((start, minutes))
+    return graph
 
 
 def find_fastest_route(graph, source, destination):
@@ -64,6 +60,9 @@ def find_fastest_route(graph, source, destination):
                 current = intersection
 
         if current is None:
+            break
+
+        if current == destination:
             break
 
         visited.add(current)
@@ -90,52 +89,121 @@ def find_fastest_route(graph, source, destination):
     return route, distances[destination]
 
 
-route, best_time = find_fastest_route(graph, "A", "D")
-
-print("Fastest route:", " -> ".join(route))
-print("Total time:", best_time, "minutes")
-
 screen = turtle.Screen()
 screen.setup(700, 450)
-screen.bgcolor("#B21020")
+screen.bgcolor("#101827")
 screen.title("Smart Traffic Navigator")
+screen.tracer(0)
 
 pen = turtle.Turtle()
 pen.speed(0)
 pen.hideturtle()
 
-pen.pensize(7)
-pen.color("gray")
+traffic_active = False
 
-for start, end in roads:
+
+def draw_city():
+    graph = build_graph()
+
+    route, best_time = find_fastest_route(graph, "A", "D")
+
+    pen.clear()
+
+    pen.pensize(7)
+
+    for start, end in roads:
+        pen.penup()
+        pen.goto(city[start])
+
+        if traffic_active and (start, end) == ("E", "A"):
+            pen.color("red")
+        else:
+            pen.color("gray")
+
+        pen.pendown()
+        pen.goto(city[end])
+
+    pen.color("lime")
+    pen.pensize(11)
+
+    for i in range(len(route) - 1):
+        start = route[i]
+        end = route[i + 1]
+
+        pen.penup()
+        pen.goto(city[start])
+        pen.pendown()
+        pen.goto(city[end])
+
+    for name, (x, y) in city.items():
+        pen.penup()
+        pen.goto(x, y)
+        pen.dot(40, "skyblue")
+
+        pen.goto(x, y - 10)
+        pen.color("black")
+        pen.write(
+            name,
+            align="center",
+            font=("Arial", 12, "bold")
+        )
+
     pen.penup()
-    pen.goto(city[start])
-    pen.pendown()
-    pen.goto(city[end])
+    pen.goto(0, 175)
+    pen.color("white")
 
-pen.color("lime")
-pen.pensize(11)
+    if traffic_active:
+        status = "TRAFFIC JAM ACTIVE"
+    else:
+        status = "NORMAL TRAFFIC"
 
-for i in range(len(route) - 1):
-    start = route[i]
-    end = route[i + 1]
-
-    pen.penup()
-    pen.goto(city[start])
-    pen.pendown()
-    pen.goto(city[end])
-
-for name, (x, y) in city.items():
-    pen.penup()
-    pen.goto(x, y)
-    pen.dot(40, "skyblue")
-
-    pen.goto(x, y - 10)
-    pen.color("black")
     pen.write(
-        name,
+        status,
         align="center",
-        font=("Arial", 12, "bold")
+        font=("Arial", 17, "bold")
     )
+
+    pen.goto(0, -170)
+
+    pen.write(
+        f"Fastest Route: {' -> '.join(route)}",
+        align="center",
+        font=("Arial", 13, "bold")
+    )
+
+    pen.goto(0, -195)
+
+    pen.write(
+        f"Travel Time: {best_time} minutes | Press T to toggle traffic",
+        align="center",
+        font=("Arial", 11, "normal")
+    )
+
+    screen.update()
+
+    print("Traffic status:", status)
+    print("Fastest route:", " -> ".join(route))
+    print("Travel time:", best_time, "minutes")
+    print("----------------------------")
+
+
+def toggle_traffic():
+    global traffic_active
+
+    traffic_active = not traffic_active
+
+    if traffic_active:
+        travel_times[("E", "A")] = 15
+    else:
+        travel_times[("E", "A")] = 6
+
+    draw_city()
+
+
+draw_city()
+
+screen.onkey(toggle_traffic, "t")
+screen.onkey(toggle_traffic, "T")
+screen.listen()
 
 screen.mainloop()
