@@ -2,13 +2,16 @@ city = {
     "A" : (-150, 0),
     "B" : (0, 100),
     "C" : (0, -100),
-    "D" : (150, 0)
+    "D" : (150, 0),
+    "E" : (0,0)
 }
 roads = [
     ("A", "B"),
     ("B", "C"),
     ("C", "D"),
-    ("D", "A"),
+    ("D", "E"),
+    ("E", "A"),
+    
 ]
 for start, end in roads:
     print (start, "connects to", end)
@@ -31,4 +34,18 @@ for start, end in roads:
     pen.pendown()
     pen.goto(city[end])
 
+
+# Draw all intersections
+for name, (x, y) in city.items():
+    pen.penup()
+    pen.goto(x, y)
+    pen.dot(40, "skyblue")
+
+    pen.goto(x, y - 10)
+    pen.color("black")
+    pen.write(name, align="center",
+              font=("Arial", 12, "bold"))
+
+
 Screen.mainloop()
+
