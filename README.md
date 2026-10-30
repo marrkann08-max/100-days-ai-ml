@@ -11,6 +11,12 @@ A Python-based traffic simulation that will
 visualize roads, calculate routes, and
 simulate traffic congestion.
 
+## Project 003: Ki Forge
+
+A hand-controlled energy ball playground with webcam tracking, two-hand charging, particle effects and gesture-triggered blasts.
+
+[Explore the project and setup guide](projects/003-ki-forge/README.md)
+
 ## Technologies
 - Python
 - Git and GitHub
