@@ -16,7 +16,7 @@ class Renderer:
         self.time = 0
 
     def blast(self, center, direction, radius):
-        self.blasts.append([*center, *direction, radius, 0.0])
+        self.blasts.append([*center, *direction, radius, 0.0, *center])
         for _ in range(90):
             angle = self.random.uniform(0, math.tau)
             speed = self.random.uniform(100, 650)
@@ -24,6 +24,8 @@ class Renderer:
                                    math.sin(angle)*speed, self.random.uniform(.3, .9)])
 
     def orb(self, layer, center, radius, power):
+        target = layer
+        layer = np.zeros_like(target)
         x, y = map(int, center)
         radius = max(4, int(radius))
         color = PALETTES[self.palette]
@@ -40,6 +42,7 @@ class Renderer:
             distance = radius*(1.4+.35*math.sin(self.time*3+i))
             point = (int(x+math.cos(angle)*distance), int(y+math.sin(angle)*distance))
             cv2.circle(layer, point, 2+i%2, color, -1, cv2.LINE_AA)
+        cv2.add(target, layer, dst=target)
 
     def draw(self, frame, energy, dt):
         self.time += dt
@@ -50,14 +53,28 @@ class Renderer:
             self.orb(layer, energy.center, radius*(1+.035*math.sin(self.time*18)), energy.charge)
         alive = []
         for blast in self.blasts:
-            blast[0] += blast[2]*1050*dt
-            blast[1] += blast[3]*1050*dt
+            blast[0] += blast[2]*820*dt
+            blast[1] += blast[3]*820*dt
             blast[5] += dt
-            x, y, dx, dy, radius, age = blast
-            if age < 1.5 and -radius*3 < x < width+radius*3:
-                for i in range(8, 0, -1):
-                    self.orb(layer, (x-dx*i*18, y-dy*i*18), radius*(1-i*.09), .5)
-                self.orb(layer, (x, y), radius, 1)
+            x, y, dx, dy, radius, age, ox, oy = blast
+            if age < 1.05:
+                color = PALETTES[self.palette]
+                origin, head = (int(ox), int(oy)), (int(x), int(y))
+                # Keep the beam anchored to the launch point long enough to read.
+                strength = min(1.0, age/.06) * min(1.0, max(0, (.75-age)/.28))
+                thickness = max(1, int(radius * 1.3 * strength))
+                if strength > 0:
+                    cv2.line(layer, origin, head, color, thickness*2, cv2.LINE_AA)
+                    cv2.line(layer, origin, head, (210, 245, 255), thickness, cv2.LINE_AA)
+                    cv2.line(layer, origin, head, (255, 255, 255),
+                             max(2, thickness//3), cv2.LINE_AA)
+                    self.orb(layer, origin, radius*(.5+.25*strength), 1)
+                ring = int(radius*(.6+age*4.5))
+                ring_color = tuple(int(c*max(0, 1-age)) for c in color)
+                cv2.circle(layer, origin, ring, ring_color,
+                           max(1, int(6*(1-age))), cv2.LINE_AA)
+                if -radius*3 < x < width+radius*3:
+                    self.orb(layer, head, radius*1.2, 1)
                 alive.append(blast)
         self.blasts = alive
         alive = []

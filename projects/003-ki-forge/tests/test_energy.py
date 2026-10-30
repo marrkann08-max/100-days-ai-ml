@@ -26,6 +26,12 @@ class EnergyTests(unittest.TestCase):
         self.assertEqual(sum(shots), 1)
         self.assertGreater(self.energy.direction[0], 0)
 
+    def test_fist_fires_when_closed_as_soon_as_ready(self):
+        while self.energy.state != 'READY':
+            self.energy.update([self.open], 1/60, 1280)
+        shots = [self.energy.update([self.closed], 1/60, 1280) for _ in range(15)]
+        self.assertEqual(sum(shots), 1)
+
     def test_tracking_loss_never_fires(self):
         self.charge()
         self.assertFalse(self.energy.update([], .1, 1280))

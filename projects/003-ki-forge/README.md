@@ -6,6 +6,10 @@ Summon a glowing energy ball in your palm, charge it between two hands, then clo
 
 ![Ki Forge mouse lab preview](assets/preview.png)
 
+Firing creates an anchored energy beam with a bright core, a travelling head and an expanding shockwave:
+
+![Energy beam blast](assets/blast-preview.png)
+
 ## Run
 
 Use Python 3.11 or newer. Tested with Python 3.14 on Windows.

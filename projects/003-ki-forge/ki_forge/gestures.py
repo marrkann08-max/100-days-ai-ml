@@ -77,5 +77,7 @@ class Energy:
                 self.state = 'BLAST'
                 return True
             self.state = 'COOLDOWN' if self.cooldown else 'HOLD'
-            self.charge = max(0, self.charge - dt * 0.08)
+            # Preserve a ready charge while confirming the fist gesture.
+            if opened or self.charge < 0.65:
+                self.charge = max(0, self.charge - dt * 0.08)
         return False
