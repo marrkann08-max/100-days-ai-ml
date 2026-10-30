@@ -6,9 +6,11 @@ Summon a glowing energy ball in your palm, charge it between two hands, then clo
 
 ![Ki Forge mouse lab preview](assets/preview.png)
 
-Closing your fist bursts the ball at its current position: expanding shockwaves and sparks scatter outward, then fade.
+The ball is a rotating cloud of 850 particles with depth and varied brightness. Closing your fist pulls that same cloud inward for 0.22 seconds, then bursts it outward with trails, a shockwave and a short synthesized sound. The burst stays where it was triggered, then fades over 1.35 seconds.
 
 ![Palm energy burst](assets/blast-preview.png)
+
+![Charge, compress, burst and fade](assets/particle-burst.gif)
 
 ## Run
 
@@ -53,15 +55,16 @@ python -m ki_forge --demo
 | Hold two open palms near each other | Center the ball between your hands; hand spacing sets its size |
 | Close your fist once READY appears | Burst the ball in place with radial sparks and shockwaves |
 | C | Cycle blue, gold and violet energy |
+| M | Toggle burst sound |
 | R | Reset energy and particles |
 | S | Save a screenshot in `captures/` |
 | Q / Escape | Quit |
 
-In mouse mode, move to steer and charge. Hold the left mouse button briefly to fire once READY appears, then release to recharge. Charging takes about two seconds. Keep your whole hand visible with the palm facing the camera; use even lighting and avoid crossing hands. A short fist debounce reduces accidental blasts. Losing tracking fades the charge and never launches a blast.
+In mouse mode, move to steer and charge. Hold the left mouse button briefly to burst once READY appears, then release to recharge. Let the compression and burst finish before forming another ball. Charging takes about two seconds. Keep your whole hand visible with the palm facing the camera; use even lighting and avoid crossing hands. A short fist debounce reduces accidental bursts. Losing tracking fades the charge and never triggers a burst. Start with `--mute` for silent playback. If no audio output device is available, the visual effect continues silently.
 
 ## How it works
 
-MediaPipe's Hand Landmarker finds 21 landmarks per hand. Wrist-to-fingertip distances estimate open fingers without relying on the hand pointing upward. A time-based state machine charges, debounces a closed fist, and applies a cooldown. OpenCV composites layered circles, elliptical energy rings, orbiting sparks, gentle bloom and expanding radial bursts over a mirrored camera image. The two-hand mode follows the midpoint of the palms.
+MediaPipe's Hand Landmarker finds 21 landmarks per hand using a 640 x 360 tracking image while the display stays at 1280 x 720. Wrist-to-fingertip distances estimate open fingers without relying on the hand pointing upward. A time-based state machine charges, debounces a closed fist, and applies a cooldown. A persistent NumPy particle array forms a rotating sphere, contracts, then gains outward velocity with exponential drag. The same particles survive each phase. Depth controls their screen position, size and brightness; OpenCV draws trails and composites a small bloom buffer with screen blending to retain camera detail. The two-hand mode follows the midpoint of the palms. Sound is generated locally from tones and filtered noise, then played asynchronously; no microphone is used.
 
 This is a gesture playground: fist detection is a geometric heuristic, and overlapping hands or extreme angles can confuse it. Effects are screen-space graphics, so they draw over the hand rather than behind fingers.
 
@@ -79,11 +82,14 @@ python -m unittest discover -s tests -v
 python -m ki_forge --preview assets/preview.png
 ```
 
-The preview checks the rendering path without opening a camera. Automated checks cover charge timing, fist debounce, tracking loss, two-hand placement and reset. Gesture feel still needs a live hand test on your camera.
+The preview checks the rendering path without opening a camera. Automated checks cover charge timing, fist debounce, tracking loss, two-hand placement, particle continuity through compression and expansion, burst lifetime, fixed origin, camera brightness, reset and synthesized audio. Gesture feel and speaker playback still need a live test on your computer.
 
 ## References
 
 - [MediaPipe Hand Landmarker Python guide](https://ai.google.dev/edge/mediapipe/solutions/vision/hand_landmarker/python)
 - [OpenCV Python documentation](https://docs.opencv.org/4.x/d6/d00/tutorial_py_root.html)
+- [sounddevice playback documentation](https://python-sounddevice.readthedocs.io/en/latest/api/convenience-functions.html)
+
+Visual references studied: [Gesture Particle](https://github.com/ppongtong/gesture-particle) for particle sphere/scatter transitions and [Stark Shapes](https://github.com/collidingScopes/stark-shapes) for hand-controlled particle depth. This project's NumPy/OpenCV renderer is implemented locally for the Python webcam app.
 
 The hand model is downloaded from Google's model hosting and is not included in the repository. No anime artwork or character assets are bundled.

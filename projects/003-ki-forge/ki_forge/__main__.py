@@ -32,6 +32,7 @@ def model_path(path):
 def main():
     parser = argparse.ArgumentParser(description='Ki Forge: summon energy with your hands.')
     parser.add_argument('--demo', action='store_true', help='Mouse controls; no webcam or model needed')
+    parser.add_argument('--mute', action='store_true', help='Disable burst sound')
     parser.add_argument('--camera', type=int, default=0, help='Camera index (default: 0)')
     parser.add_argument('--model', type=Path, default=ROOT/'assets/hand_landmarker.task')
     parser.add_argument('--preview', type=Path, help='Save a deterministic preview and exit without a camera')
@@ -40,6 +41,7 @@ def main():
     import numpy as np
     from .effects import Renderer, hud
     from .gestures import Energy, Hand, describe
+    from .audio import Sound
 
     energy, renderer = Energy(), Renderer(seed=42)
     width, height = 1280, 720
@@ -55,7 +57,7 @@ def main():
     if args.preview:
         for _ in range(110):
             energy.update([Hand((width/2, height/2), 100, True)], 1/30, width)
-            renderer.time += 1/30
+            renderer.draw(background(), energy, 1/30)
         frame = hud(renderer.draw(background(), energy, 1/30), energy, 60, True)
         args.preview.parent.mkdir(parents=True, exist_ok=True)
         if not cv2.imwrite(str(args.preview), frame):
@@ -64,6 +66,7 @@ def main():
         return
 
     capture = tracker = None
+    sound = Sound(enabled=not args.mute)
     window = 'Ki Forge'
     mouse = [width/2, height/2, False]
     def mouse_event(event, x, y, flags, param):
@@ -106,14 +109,18 @@ def main():
                 frame = cv2.flip(frame, 1)
                 frame = cv2.resize(frame, (width, height))
                 timestamp = max(timestamp+1, int(now*1000))
+                tracking_frame = cv2.resize(frame, (640, 360))
                 result = tracker.detect_for_video(
                     mp.Image(image_format=mp.ImageFormat.SRGB,
-                             data=cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)), timestamp)
+                             data=cv2.cvtColor(tracking_frame, cv2.COLOR_BGR2RGB)), timestamp)
                 hands = [describe(points, width, height) for points in result.hand_landmarks]
             if energy.update(hands, dt, width):
                 renderer.blast(energy.center, energy.radius)
             fps = fps*.9 + .1/max(dt, .001)
-            output = hud(renderer.draw(frame, energy, dt), energy, fps, args.demo)
+            rendered = renderer.draw(frame, energy, dt)
+            if renderer.consume_sound():
+                sound.play()
+            output = hud(rendered, energy, fps, args.demo, renderer.label)
             cv2.imshow(window, output)
             key = cv2.waitKey(1) & 255
             if key in (27, ord('q')) or cv2.getWindowProperty(window, cv2.WND_PROP_VISIBLE) < 1:
@@ -122,8 +129,12 @@ def main():
                 renderer.palette = (renderer.palette+1) % 3
             elif key == ord('r'):
                 energy.reset()
-                renderer.blasts.clear()
-                renderer.particles.clear()
+                renderer.reset()
+                sound.stop()
+            elif key == ord('m'):
+                sound.enabled = not sound.enabled
+                sound.stop()
+                print('Sound on' if sound.enabled else 'Sound muted')
             elif key == ord('s'):
                 folder = ROOT/'captures'
                 folder.mkdir(exist_ok=True)
@@ -132,6 +143,7 @@ def main():
                     raise RuntimeError('Could not save screenshot.')
                 print(f'Saved {path}')
     finally:
+        sound.stop()
         if capture is not None:
             capture.release()
         if tracker is not None:
