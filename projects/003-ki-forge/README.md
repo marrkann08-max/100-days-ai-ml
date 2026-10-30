@@ -2,13 +2,13 @@
 
 **Project 003 / 100 Days, 100 Projects**
 
-Summon a glowing energy ball in your palm, charge it between two hands, then close your fist to launch it across your webcam feed. Inspired by anime energy attacks, built with Python, OpenCV and MediaPipe.
+Summon a glowing energy ball in your palm, charge it between two hands, then close your fist to burst it in place at your hand. Inspired by anime energy attacks, built with Python, OpenCV and MediaPipe.
 
 ![Ki Forge mouse lab preview](assets/preview.png)
 
-Firing creates an anchored energy beam with a bright core, a travelling head and an expanding shockwave:
+Closing your fist bursts the ball at its current position: expanding shockwaves and sparks scatter outward, then fade.
 
-![Energy beam blast](assets/blast-preview.png)
+![Palm energy burst](assets/blast-preview.png)
 
 ## Run
 
@@ -51,7 +51,7 @@ python -m ki_forge --demo
 | --- | --- |
 | Show an open palm | Summon and charge an energy ball |
 | Hold two open palms near each other | Center the ball between your hands; hand spacing sets its size |
-| Close your fist once READY appears | Launch a blast; left half fires left, right half fires right |
+| Close your fist once READY appears | Burst the ball in place with radial sparks and shockwaves |
 | C | Cycle blue, gold and violet energy |
 | R | Reset energy and particles |
 | S | Save a screenshot in `captures/` |
@@ -61,7 +61,7 @@ In mouse mode, move to steer and charge. Hold the left mouse button briefly to f
 
 ## How it works
 
-MediaPipe's Hand Landmarker finds 21 landmarks per hand. Wrist-to-fingertip distances estimate open fingers without relying on the hand pointing upward. A time-based state machine charges, debounces a closed fist, and applies a cooldown. OpenCV composites layered circles, elliptical energy rings, orbiting sparks, bloom and travelling projectiles over a mirrored camera image. The two-hand mode follows the midpoint of the palms.
+MediaPipe's Hand Landmarker finds 21 landmarks per hand. Wrist-to-fingertip distances estimate open fingers without relying on the hand pointing upward. A time-based state machine charges, debounces a closed fist, and applies a cooldown. OpenCV composites layered circles, elliptical energy rings, orbiting sparks, gentle bloom and expanding radial bursts over a mirrored camera image. The two-hand mode follows the midpoint of the palms.
 
 This is a gesture playground: fist detection is a geometric heuristic, and overlapping hands or extreme angles can confuse it. Effects are screen-space graphics, so they draw over the hand rather than behind fingers.
 

@@ -111,7 +111,7 @@ def main():
                              data=cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)), timestamp)
                 hands = [describe(points, width, height) for points in result.hand_landmarks]
             if energy.update(hands, dt, width):
-                renderer.blast(energy.center, energy.direction, energy.radius)
+                renderer.blast(energy.center, energy.radius)
             fps = fps*.9 + .1/max(dt, .001)
             output = hud(renderer.draw(frame, energy, dt), energy, fps, args.demo)
             cv2.imshow(window, output)
