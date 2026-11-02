@@ -12,21 +12,21 @@ I'm [Keshav](https://keshavmarkan.com), a computer science student at Conestoga 
 | 002 | **Interactive portfolio** | React, TypeScript, an explorable Three.js campus, and Cloudflare Workers + D1 | [Website](https://keshavmarkan.com) · [Source](https://github.com/marrkann08-max/keshav-portfolio) |
 | 003 | **Ki Forge** | MediaPipe hand tracking, an OpenCV/NumPy particle renderer, and synthesized sound | [Setup & source](projects/003-ki-forge) |
 | 004 | **Opcode Canvas** | Editable x86 assembly, a Python pixel canvas, and instruction stepping | [Setup & source](projects/004-opcode-canvas) |
-| 005 | **Petri Minds** | NumPy neural-network brains evolved with a genetic algorithm in a Pygame petri dish | [Setup & source](projects/005-petri-minds) |
+| 005 | **Descent** | A *Platform*-inspired tower where NumPy neural-net brains evolve greed or sharing via a genetic algorithm | [Setup & source](projects/005-descent) |
 
 The portfolio source lives in [keshav-portfolio](https://github.com/marrkann08-max/keshav-portfolio). The other projects are in this repository.
 
-## Latest experiment — Petri Minds
+## Latest experiment — Descent
 
-Sixty creatures with tiny neural-network brains compete for food in a petri dish. Nobody programs their behaviour: the best foragers breed, their genomes mutate, and within a few dozen generations they learn to chase food and stay away from the wall.
+Inspired by *The Platform*: a feast descends through a tower once a day, with enough food for everyone if no one takes more than their share. Inmates with tiny neural-network brains decide how much to eat, and evolution decides who breeds. Without solidarity, greed evolves and the bottom starves. When selection acts on whole towers, the inmates learn to take turns and almost everyone survives.
 
-![Petri Minds](projects/005-petri-minds/assets/preview.png)
+![Descent](projects/005-descent/assets/preview.png)
 
-**Python · NumPy · genetic algorithms · neural networks · Pygame**
+**Python · NumPy · neural networks · genetic algorithms · multilevel selection · Pygame**
 
-Click any creature to watch its neurons fire, follow the fitness curve generation by generation, or replay the current champion alone.
+Watch the platform empty level by level, click any inmate to see its brain decide, and switch solidarity on to see whether sharing can evolve.
 
-[Run Petri Minds →](projects/005-petri-minds/README.md)
+[Run Descent →](projects/005-descent/README.md)
 
 ## Repository layout
 
@@ -35,12 +35,12 @@ projects/
 ├── 001-smart-traffic-navigator/   shortest-path traffic simulation
 ├── 003-ki-forge/                 gesture-controlled energy playground
 ├── 004-opcode-canvas/            assembly-driven pixel canvas
-└── 005-petri-minds/              evolving neural-network creatures
+└── 005-descent/                  evolving greed vs. sharing in a descending-feast tower
 ```
 
 ## Running a project
 
-Each project has its own dependencies and entry point. Open its folder and follow the setup instructions. Ki Forge, Opcode Canvas and Petri Minds include dedicated READMEs and automated checks; the traffic navigator includes its Python source and experiment outputs.
+Each project has its own dependencies and entry point. Open its folder and follow the setup instructions. Ki Forge, Opcode Canvas and Descent include dedicated READMEs and automated checks; the traffic navigator includes its Python source and experiment outputs.
 
 ## About the series
 

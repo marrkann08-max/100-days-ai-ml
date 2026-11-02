@@ -1,15 +1,10 @@
 import numpy as np
 
-INPUT_LABELS = (
-    "food sin", "food cos", "food near",
-    "poison sin", "poison cos", "poison near",
-    "wall left", "wall ahead", "wall right",
-    "energy",
-)
-OUTPUT_LABELS = ("turn", "speed")
+INPUT_LABELS = ("level", "fair share", "food left", "energy", "month left")
+OUTPUT_LABELS = ("portion",)
 
 N_INPUTS = len(INPUT_LABELS)
-N_HIDDEN = 8
+N_HIDDEN = 6
 N_OUTPUTS = len(OUTPUT_LABELS)
 
 # Each genome is one flat row: input weights, hidden biases, output weights, output biases.
@@ -17,8 +12,8 @@ SHAPES = ((N_INPUTS, N_HIDDEN), (N_HIDDEN,), (N_HIDDEN, N_OUTPUTS), (N_OUTPUTS,)
 GENOME_SIZE = sum(int(np.prod(shape)) for shape in SHAPES)
 
 
-def random_genomes(rng, count):
-    return rng.normal(0, .6, (count, GENOME_SIZE))
+def random_genomes(rng, *shape):
+    return rng.normal(0, .6, (*shape, GENOME_SIZE))
 
 
 def unpack(genomes):

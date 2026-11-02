@@ -5,5 +5,5 @@ if not exist ".venv\Scripts\python.exe" (
     pause
     exit /b 1
 )
-".venv\Scripts\python.exe" -m petri_minds
+".venv\Scripts\python.exe" -m descent
 if errorlevel 1 pause
