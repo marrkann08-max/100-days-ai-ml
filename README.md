@@ -13,20 +13,21 @@ I'm [Keshav](https://keshavmarkan.com), a computer science student at Conestoga 
 | 003 | **Ki Forge** | MediaPipe hand tracking, an OpenCV/NumPy particle renderer, and synthesized sound | [Setup & source](projects/003-ki-forge) |
 | 004 | **Opcode Canvas** | Editable x86 assembly, a Python pixel canvas, and instruction stepping | [Setup & source](projects/004-opcode-canvas) |
 | 005 | **Descent** | A *Platform*-inspired tower where NumPy neural-net brains evolve greed or sharing via a genetic algorithm | [Setup & source](projects/005-descent) |
+| 006 | **Holo Window** | Webcam head tracking and off-axis projection turn a laptop screen into a 3D window; Depth Anything turns photos into scenes | [Setup & source](projects/006-holo-window) |
 
 The portfolio source lives in [keshav-portfolio](https://github.com/marrkann08-max/keshav-portfolio). The other projects are in this repository.
 
-## Latest experiment — Descent
+## Latest experiment — Holo Window
 
-Inspired by *The Platform*: a feast descends through a tower once a day, with enough food for everyone if no one takes more than their share. Inmates with tiny neural-network brains decide how much to eat, and evolution decides who breeds. Without solidarity, greed evolves and the bottom starves. When selection acts on whole towers, the inmates learn to take turns and almost everyone survives.
+Your laptop screen becomes a window. The webcam tracks your eyes and the scene is re-rendered from exactly where you sit, so moving your head lets you look around objects, into the room behind the glass, and past targets floating in front of it. Drop in any photo and a depth model turns it into a 3D scene; press P and your selfie becomes one.
 
-![Descent](projects/005-descent/assets/preview.png)
+![Holo Window](projects/006-holo-window/assets/preview.jpg)
 
-**Python · NumPy · neural networks · genetic algorithms · multilevel selection · Pygame**
+**Python · MediaPipe Face Landmarker · off-axis projection · Depth Anything V2 · ONNX Runtime · OpenGL (moderngl)**
 
-Watch the platform empty level by level, click any inmate to see its brain decide, and switch solidarity on to see whether sharing can evolve.
+Runs on a laptop CPU with integrated graphics: face tracking at 30 fps, rendering at 60 fps, no NVIDIA GPU.
 
-[Run Descent →](projects/005-descent/README.md)
+[Run Holo Window →](projects/006-holo-window/README.md)
 
 ## Repository layout
 
@@ -35,12 +36,13 @@ projects/
 ├── 001-smart-traffic-navigator/   shortest-path traffic simulation
 ├── 003-ki-forge/                 gesture-controlled energy playground
 ├── 004-opcode-canvas/            assembly-driven pixel canvas
-└── 005-descent/                  evolving greed vs. sharing in a descending-feast tower
+├── 005-descent/                  evolving greed vs. sharing in a descending-feast tower
+└── 006-holo-window/              head-tracked 3D window on a laptop screen
 ```
 
 ## Running a project
 
-Each project has its own dependencies and entry point. Open its folder and follow the setup instructions. Ki Forge, Opcode Canvas and Descent include dedicated READMEs and automated checks; the traffic navigator includes its Python source and experiment outputs.
+Each project has its own dependencies and entry point. Open its folder and follow the setup instructions. Ki Forge, Opcode Canvas, Descent and Holo Window include dedicated READMEs and automated checks; the traffic navigator includes its Python source and experiment outputs.
 
 ## About the series
 
