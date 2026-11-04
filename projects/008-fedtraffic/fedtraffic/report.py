@@ -189,7 +189,7 @@ def figures(bench, fed, trade):
     for xkey, xlabel, fname, title in (("round", "communication round", "fl_convergence.png", "RQ4: convergence per round"),
                                        ("total_mb", "cumulative communication (MB, up + down)", "fl_communication.png",
                                         "RQ4: accuracy per megabyte communicated")):
-        fig, ax = plt.subplots(figsize=(6, 3.6))
+        fig, ax = plt.subplots(figsize=(8.2, 3.6))
         for i, (name, label) in enumerate(curves):
             log = by_name[name]["log"]
             ax.plot([row[xkey] for row in log], [row["val_mae"] for row in log], marker=".", ms=3,
@@ -199,9 +199,7 @@ def figures(bench, fed, trade):
         ax.set_xlabel(xlabel)
         ax.set_ylabel("validation MAE (mph)")
         ax.set_title(title)
-        ax.legend(frameon=False, fontsize=6.5)
-        if xkey == "total_mb":
-            ax.set_xscale("log")
+        ax.legend(frameon=False, fontsize=7, loc="upper left", bbox_to_anchor=(1.01, 1))
         fig.tight_layout()
         fig.savefig(FIGURES / fname)
         plt.close(fig)
@@ -224,20 +222,72 @@ def figures(bench, fed, trade):
         plt.close(fig)
 
 
+def privacy_table(runs, fed, summary):
+    if not runs:
+        return
+    header = ["Setting", "Noise multiplier σ", "ε at δ = 1e-5 (12 rounds)", "Test MAE", "MAE 60min", "Final val MAE"]
+    rows = []
+    for r in sorted(runs, key=lambda r: r["meta_privacy"]["noise_multiplier"] if "meta_privacy" in r else 0):
+        p = r.get("meta_privacy", {"noise_multiplier": 0.0, "epsilon": float("inf")})
+        label = "Uniform averaging, clipping off, no noise" if not p["noise_multiplier"] else f"Central DP, clip C = {p['clip']}"
+        eps = "∞ (no guarantee)" if p["epsilon"] == float("inf") else f"{p['epsilon']:,.1f}"
+        test = r["results"]["test"]
+        rows.append([label, p["noise_multiplier"], eps, f"{test['mae']:.3f}", f"{test['mae@60min']:.2f}", f"{r['log'][-1]['val_mae']:.3f}"])
+        summary.setdefault("privacy", {})[r["name"]] = {"noise": p["noise_multiplier"], "epsilon": p["epsilon"],
+                                                          "test_mae": round(test["mae"], 3)}
+    write_table("privacy", header, rows)
+
+
+def privacy_figure(runs, bench):
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    noisy = sorted((r for r in runs if r.get("meta_privacy")), key=lambda r: r["meta_privacy"]["epsilon"])
+    if not noisy:
+        return
+    fig, ax = plt.subplots(figsize=(5.2, 3.2))
+    ax.plot([r["meta_privacy"]["epsilon"] for r in noisy], [r["results"]["test"]["mae"] for r in noisy], "o-", color="#7d3c98")
+    for r in noisy:
+        ax.annotate(f"σ = {r['meta_privacy']['noise_multiplier']}", (r["meta_privacy"]["epsilon"], r["results"]["test"]["mae"]),
+                    textcoords="offset points", xytext=(4, 6), fontsize=7)
+    plain = next((r for r in runs if not r.get("meta_privacy")), None)
+    if plain:
+        ax.axhline(plain["results"]["test"]["mae"], color="#c0392b", ls="--", lw=1, label="same setup, no noise")
+    ha = next((r for r in bench if r["name"] == "historical_average"), None)
+    if ha:
+        ax.axhline(ha["results"]["test"]["mae"], color="#999", ls=":", lw=1, label="historical average (no learning)")
+    ax.set_xscale("log")
+    ax.set_xlabel("privacy budget ε (log scale; smaller = more private)")
+    ax.set_ylabel("test MAE (mph)")
+    ax.set_title("RQ5: the price of district-level differential privacy")
+    ax.legend(frameon=False, fontsize=7)
+    fig.tight_layout()
+    fig.savefig(FIGURES / "privacy_tradeoff.png")
+    plt.close(fig)
+
+
 def main():
     bench, fed, trade = load_runs("benchmark"), load_runs("federated"), load_runs("tradeoffs")
-    summary = {"runs": {"benchmark": len(bench), "federated": len(fed), "tradeoffs": len(trade)},
-               "commits": sorted({r["git"]["commit"][:7] for r in bench + fed + trade}),
-               "dirty_runs": sum(r["git"]["dirty"] for r in bench + fed + trade)}
+    priv = load_runs("privacy")
+    for r in priv:
+        meta = __import__("json").loads((r["dir"] / "run.json").read_text(encoding="utf-8"))
+        if "privacy" in meta:
+            r["meta_privacy"] = meta["privacy"]
+    every = bench + fed + trade + priv
+    summary = {"runs": {"benchmark": len(bench), "federated": len(fed), "tradeoffs": len(trade), "privacy": len(priv)},
+               "commits": sorted({r["git"]["commit"][:7] for r in every}),
+               "dirty_runs": sum(r["git"]["dirty"] for r in every)}
     benchmark_table(bench, summary)
     federated_table(fed, summary)
     tradeoff_table(fed, trade, summary)
+    privacy_table(priv, fed, summary)
     a = next((r for r in bench if r["name"] == "gconv_gru_s0"), None)
     b = next((r for r in fed if r["name"] == "centralised_full_s0"), None)
     if a and b:   # the same configuration, run twice in different sweeps
         summary["reproducibility_check"] = {"benchmark_gconv_gru_s0": a["results"]["test"]["mae"],
                                             "federated_centralised_full_s0": b["results"]["test"]["mae"]}
     figures(bench, fed, trade)
+    privacy_figure(priv, bench)
     (ROOT / "results" / "summary.json").write_text(json.dumps(summary, indent=2, default=float), encoding="utf-8")
     print(json.dumps(summary, indent=2, default=float))
 

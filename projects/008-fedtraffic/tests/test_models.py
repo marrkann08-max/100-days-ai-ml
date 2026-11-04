@@ -12,6 +12,7 @@ from fedtraffic import models, tracking
 from fedtraffic.federated import compress
 from fedtraffic.metrics import Accumulator, masked_mae_loss
 from fedtraffic.partition import cut_edges, partition
+from fedtraffic.privacy import epsilon
 
 
 def ring(n):
@@ -120,6 +121,19 @@ class FederatedTests(unittest.TestCase):
             step = (delta.max() - delta.min()) / 255
             self.assertLessEqual((byte[k] - new[k]).abs().max().item(), step.item() / 2 + 1e-6)
             self.assertLess((half[k] - new[k]).abs().max().item(), 1e-4)
+
+
+class PrivacyTests(unittest.TestCase):
+    def test_epsilon_behaves(self):
+        self.assertEqual(epsilon(0, 12), float("inf"))
+        self.assertGreater(epsilon(1.0, 12), epsilon(2.0, 12))      # more noise, more privacy
+        self.assertGreater(epsilon(1.0, 24), epsilon(1.0, 12))      # more rounds, less privacy
+
+    def test_epsilon_matches_a_hand_computed_case(self):
+        # One round, sigma = 1, delta = 1e-5: minimise a/2 + ln(1e5)/(a - 1) by hand.
+        a = 1 + np.sqrt(2 * np.log(1e5))
+        expected = a / 2 + np.log(1e5) / (a - 1)
+        self.assertAlmostEqual(epsilon(1.0, 1), expected, delta=.02)
 
 
 class TrackingTests(unittest.TestCase):

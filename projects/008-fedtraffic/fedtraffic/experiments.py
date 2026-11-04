@@ -3,6 +3,7 @@
     python -m fedtraffic.experiments benchmark      # RQ1-2: recurrent encoders, graph or not (centralised)
     python -m fedtraffic.experiments federated      # RQ3: centralised vs local-only vs federated
     python -m fedtraffic.experiments tradeoffs      # RQ4: rounds, local epochs, participation, FedProx, compression
+    python -m fedtraffic.experiments privacy        # RQ5: accuracy cost of differential privacy
     python -m fedtraffic.experiments smoke          # tiny end-to-end check
 """
 import argparse
@@ -143,6 +144,13 @@ def tradeoffs():
         federated_job(f"fedprox_mu{mu}", {"federated.strategy": "fedprox", "federated.proximal_mu": mu})
 
 
+def privacy():
+    """RQ5 (ethics): what does a formal privacy guarantee cost with only four districts?"""
+    federated_job("dp_uniform_clip_only", {"federated.dp_uniform": True}, group="privacy")
+    for noise in (0.01, 0.1, 1.0, 2.0):
+        federated_job(f"dp_noise{noise}", {"federated.dp_noise": noise}, group="privacy")
+
+
 def smoke():
     quick = {"train.epochs": 1, "data.train_stride": 60, "data.eval_stride": 60, "federated.rounds": 2}
     centralised("smoke", "gconv_gru", {**quick, "model.name": "gconv_gru"})
@@ -151,10 +159,10 @@ def smoke():
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("group", choices=("benchmark", "federated", "tradeoffs", "smoke"))
+    parser.add_argument("group", choices=("benchmark", "federated", "tradeoffs", "privacy", "smoke"))
     args = parser.parse_args()
     keep_awake()
-    {"benchmark": benchmark, "federated": federated, "tradeoffs": tradeoffs, "smoke": smoke}[args.group]()
+    {"benchmark": benchmark, "federated": federated, "tradeoffs": tradeoffs, "privacy": privacy, "smoke": smoke}[args.group]()
 
 
 if __name__ == "__main__":

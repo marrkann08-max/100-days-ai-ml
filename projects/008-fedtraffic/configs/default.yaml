@@ -35,3 +35,6 @@ federated:
   strategy: fedavg         # fedavg | fedprox
   proximal_mu: 0.01
   update_bits: 32          # 32 = full precision, 16/8 = compressed client uploads
+  dp_noise: 0.0            # > 0: central DP, Gaussian noise multiplier (server-side fixed clipping)
+  dp_clip: 3.0             # L2 clipping norm for district updates (typical late-training update norm ~3)
+  dp_uniform: false        # average districts equally (required for the DP guarantee)

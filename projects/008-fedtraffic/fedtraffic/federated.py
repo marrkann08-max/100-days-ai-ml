@@ -86,7 +86,7 @@ def make_client_app(config):
                                      prox=(reference, mu) if reference else None)
         state, upload = compress(model.state_dict(), start, config["federated"]["update_bits"])
         observations = int(len(env["train"]) * len(env["nodes"]))
-        metrics = MetricRecord({"train-loss": loss, "num-examples": observations,
+        metrics = MetricRecord({"train-loss": loss, "num-examples": observations, "uniform-weight": 1,
                                 "upload-bytes": upload, "compute-s": time.time() - tic})
         return Message(content=RecordDict({"arrays": ArrayRecord(state), "metrics": metrics}), reply_to=msg)
 
@@ -99,7 +99,8 @@ def make_client_app(config):
         acc = train.evaluate(model, env["graph"], env["val"], env["norm"])
         r = acc.result()
         # Weighted by observation count, these averages pool exactly into the all-sensor MAE and MSE.
-        metrics = MetricRecord({"val-mae": r["mae"], "val-mse": r["rmse"] ** 2, "num-examples": r["count"]})
+        metrics = MetricRecord({"val-mae": r["mae"], "val-mse": r["rmse"] ** 2, "num-examples": r["count"],
+                                "uniform-weight": 1})
         return Message(content=RecordDict({"metrics": metrics}), reply_to=msg)
 
     return app
@@ -108,7 +109,7 @@ def make_client_app(config):
 def make_server_app(config, out):
     from flwr.app import ArrayRecord, ConfigRecord
     from flwr.serverapp import ServerApp
-    from flwr.serverapp.strategy import FedAvg, FedProx
+    from flwr.serverapp.strategy import DifferentialPrivacyServerSideFixedClipping, FedAvg, FedProx
 
     app = ServerApp()
     f = config["federated"]
@@ -120,8 +121,16 @@ def make_server_app(config, out):
         sampled = max(1, round(f["fraction"] * f["clients"]))
         common = dict(fraction_train=f["fraction"], fraction_evaluate=1.0, min_train_nodes=sampled,
                       min_evaluate_nodes=f["clients"], min_available_nodes=f["clients"])
+        if f.get("dp_uniform") or f.get("dp_noise", 0) > 0:
+            # The DP guarantee assumes every district counts equally in the model average.
+            # Validation metrics are still pooled by observation count, like every other run.
+            from flwr.serverapp.strategy.strategy_utils import aggregate_metricrecords
+            common["weighted_by_key"] = "uniform-weight"
+            common["evaluate_metrics_aggr_fn"] = lambda records, _key: aggregate_metricrecords(records, "num-examples")
         strategy = (FedProx(proximal_mu=f["proximal_mu"], **common) if f["strategy"] == "fedprox"
                     else FedAvg(**common))
+        if f.get("dp_noise", 0) > 0:
+            strategy = DifferentialPrivacyServerSideFixedClipping(strategy, f["dp_noise"], f["dp_clip"], sampled)
         # A round that hasn't answered in 10 minutes has failed (e.g. after the laptop slept);
         # better to stop than to wait Flower's default hour per round.
         out["result"] = strategy.start(grid=grid, initial_arrays=ArrayRecord(model.state_dict()),
@@ -187,6 +196,10 @@ def run_federated(name, overrides, group=None):
         test_acc.merge(train.evaluate(model, graph, train.windows_for(data, config, "test", nodes), norm))
     torch.save(model.state_dict(), run.dir / "checkpoint.pt")
     test = test_acc.result()
+    if f.get("dp_noise", 0) > 0:
+        from .privacy import epsilon
+        run.meta["privacy"] = {"noise_multiplier": f["dp_noise"], "clip": f["dp_clip"], "delta": 1e-5,
+                               "epsilon": round(epsilon(f["dp_noise"], f["rounds"]), 2), "level": "district"}
     run.finish(val=val_acc.result(), test=test, params=params, total_mb=round(total_mb, 3),
                cut_edges=round(cut_edges(data["adjacency"], groups), 4), clients=[len(g) for g in groups],
                train_s=round(time.time() - start, 1))

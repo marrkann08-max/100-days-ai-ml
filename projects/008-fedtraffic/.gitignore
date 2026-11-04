@@ -4,3 +4,5 @@ data/
 runs/*/checkpoint.pt
 .ray/
 experiments.log
+.flwr/
+deploy/logs/
