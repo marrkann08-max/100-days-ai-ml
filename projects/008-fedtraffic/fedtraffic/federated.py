@@ -28,7 +28,7 @@ def client_env(config, client):
     if key not in _CLIENT_CACHE:
         data = ds.load(config)
         f = config["federated"]
-        nodes = partition(data["locations"], f["clients"], f["partition"], config["seed"])[client]
+        nodes = partition(data["locations"], f["clients"], f["partition"], f["partition_seed"])[client]
         _CLIENT_CACHE[key] = {
             "nodes": nodes,
             "norm": tuple(float(v) for v in data["norm"]),
@@ -149,7 +149,7 @@ def run_federated(name, overrides, group=None):
     config = cfg.load(overrides=overrides)
     f = config["federated"]
     data = ds.load(config)
-    groups = partition(data["locations"], f["clients"], f["partition"], config["seed"])
+    groups = partition(data["locations"], f["clients"], f["partition"], f["partition_seed"])
     run = Run(name, config, group)
     # Ray workers are separate processes: they inherit this, so they can import fedtraffic.
     os.environ["PYTHONPATH"] = os.pathsep.join(filter(None, (str(cfg.ROOT), os.environ.get("PYTHONPATH"))))

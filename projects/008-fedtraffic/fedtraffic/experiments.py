@@ -81,7 +81,7 @@ def centralised(group, name, overrides, nodes_from=None):
     start = time.time()
     graph = nodes = None
     if nodes_from == "cut":
-        groups = partition(data["locations"], config["federated"]["clients"], config["federated"]["partition"], config["seed"])
+        groups = partition(data["locations"], config["federated"]["clients"], config["federated"]["partition"], config["federated"]["partition_seed"])
         graph = train.block_graph(data, groups, config["model"]["diffusion_steps"])
     model, val, test = train.fit(config, data, run, nodes, graph)
     params = sum(p.numel() for p in model.parameters()) if hasattr(model, "parameters") else 0
@@ -107,7 +107,7 @@ def local_only(name, overrides):
     data = ds.load(config)
     run = Run(name, config, "federated")
     f = config["federated"]
-    groups = partition(data["locations"], f["clients"], f["partition"], config["seed"])
+    groups = partition(data["locations"], f["clients"], f["partition"], f["partition_seed"])
     norm = tuple(float(v) for v in data["norm"])
     val_acc, test_acc = Accumulator(), Accumulator()
     for k, nodes in enumerate(groups):

@@ -29,6 +29,7 @@ train:
 federated:
   clients: 4
   partition: spatial       # spatial (k-means on sensor locations) | random
+  partition_seed: 0        # fixed, so every run (whatever its model seed) uses the same districts
   rounds: 12
   local_epochs: 1
   fraction: 1.0            # share of clients sampled each round

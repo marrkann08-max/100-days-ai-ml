@@ -118,7 +118,7 @@ def figures(d, config):
 
     # 4. Sensor map with the federated districts.
     clients = config["federated"]["clients"]
-    groups = partition(d["locations"], clients, "spatial", seed=config["seed"])
+    groups = partition(d["locations"], clients, "spatial", seed=config["federated"]["partition_seed"])
     lat, lon = d["locations"].T
     adj = d["adjacency"]
     fig, ax = plt.subplots(figsize=(5.2, 4))

@@ -1,7 +1,7 @@
 """The same ClientApp and ServerApp as the simulation, served by real Flower processes.
 
 In simulation, Ray runs every client inside one machine's process pool. Here each
-district is its own SuperNode process that connects to a SuperLink over gRPC,
+district is its own SuperNode process that connects to a SuperLink over the network,
 exactly as it would from a separate computer. Only the transport changes; the
 training code is fedtraffic.federated, unmodified.
 """
@@ -71,9 +71,9 @@ def server_main(grid, context):
     model.load_state_dict(result.arrays.to_torch_state_dict())
     norm = tuple(float(v) for v in data["norm"])
     test = Accumulator()
-    for nodes in partition(data["locations"], f["clients"], f["partition"], config["seed"]):
+    for nodes in partition(data["locations"], f["clients"], f["partition"], f["partition_seed"]):
         graph = train.subgraph(data, nodes, config["model"]["diffusion_steps"])
         test.merge(train.evaluate(model, graph, train.windows_for(data, config, "test", nodes), norm))
     torch.save(model.state_dict(), run.dir / "checkpoint.pt")
     run.finish(test=test.result(), params=params, total_mb=round(total_mb, 3), train_s=round(time.time() - start, 1),
-               transport="Flower SuperLink + 4 SuperNodes over gRPC (insecure, localhost)")
+               transport="Flower SuperLink + 4 SuperNode processes over HTTP (TLS off, localhost)")
