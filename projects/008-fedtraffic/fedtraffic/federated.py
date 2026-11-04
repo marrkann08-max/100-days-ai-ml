@@ -122,8 +122,10 @@ def make_server_app(config, out):
                       min_evaluate_nodes=f["clients"], min_available_nodes=f["clients"])
         strategy = (FedProx(proximal_mu=f["proximal_mu"], **common) if f["strategy"] == "fedprox"
                     else FedAvg(**common))
+        # A round that hasn't answered in 10 minutes has failed (e.g. after the laptop slept);
+        # better to stop than to wait Flower's default hour per round.
         out["result"] = strategy.start(grid=grid, initial_arrays=ArrayRecord(model.state_dict()),
-                                       num_rounds=f["rounds"], train_config=ConfigRecord({}))
+                                       num_rounds=f["rounds"], train_config=ConfigRecord({}), timeout=600)
 
     return app
 
@@ -155,7 +157,9 @@ def run_federated(name, overrides, group=None):
         },
         verbose_logging=bool(os.environ.get("FEDTRAFFIC_VERBOSE")),
     )
-    result = out["result"]
+    result = out.get("result")
+    if result is None or len(result.evaluate_metrics_clientapp) < f["rounds"]:
+        raise RuntimeError(f"{name}: federated training did not complete all {f['rounds']} rounds")
 
     # Per-round log: pooled validation error and the bytes moved.
     params = models.parameters(models.build(config))
@@ -187,3 +191,10 @@ def run_federated(name, overrides, group=None):
                cut_edges=round(cut_edges(data["adjacency"], groups), 4), clients=[len(g) for g in groups],
                train_s=round(time.time() - start, 1))
     print(f"{name:<32} test MAE {test['mae']:.3f}  ({total_mb:.1f} MB sent, {time.time() - start:.0f} s)")
+
+
+if __name__ == "__main__":
+    # Used by experiments.py to run each federated job in its own process.
+    import json
+    import sys
+    run_federated(sys.argv[1], json.loads(sys.argv[2]), sys.argv[3] if len(sys.argv) > 3 else None)

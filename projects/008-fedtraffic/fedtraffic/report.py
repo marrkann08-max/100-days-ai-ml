@@ -58,7 +58,7 @@ def write_table(name, header, rows):
 def benchmark_table(runs, summary):
     order = ("last_value", "historical_average", "gru", "lstm", "gconv_mlp", "gconv_gru", "gconv_lstm")
     groups = grouped(runs)
-    header = ["Model", "Params", "Seeds"] + [f"MAE {h}" for h in HORIZONS] + ["RMSE 60min", "MAPE 60min (%)", "Train time (s)"]
+    header = ["Model", "Params", "Seeds"] + [f"MAE {h}" for h in HORIZONS] + ["RMSE 60min", "MAPE 60min (%)", "Train time, median (s)"]
     rows = []
     for key in order:
         if key not in groups:
@@ -67,7 +67,8 @@ def benchmark_table(runs, summary):
         row = [LABELS[key], rs[0]["results"].get("params", 0), len(rs)]
         row += [fmt(*stat(rs, f"mae@{h}")) for h in HORIZONS]
         row += [fmt(*stat(rs, "rmse@60min")), fmt(*stat(rs, "mape@60min"))]
-        row.append(f"{np.mean([r['results'].get('train_s', 0) for r in rs]):.0f}")
+        # Median: one run was stretched by the laptop sleeping mid-training.
+        row.append(f"{np.median([r['results'].get('train_s', 0) for r in rs]):.0f}")
         rows.append(row)
         summary.setdefault("benchmark", {})[key] = {
             f"mae@{h}": round(stat(rs, f"mae@{h}")[0], 3) for h in HORIZONS} | {

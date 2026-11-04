@@ -6,15 +6,63 @@
     python -m fedtraffic.experiments smoke          # tiny end-to-end check
 """
 import argparse
+import json
+import shutil
+import subprocess
+import sys
 import time
 
 from . import config as cfg
 from . import data as ds
 from . import train
 from .partition import partition
-from .tracking import Run, load_runs
+from .tracking import RUNS, Run, load_runs
 
 SEEDS = (0, 1, 2)
+
+
+def keep_awake():
+    """Ask Windows not to sleep while this process runs (reverts automatically on exit).
+
+    A suspended laptop breaks Ray's connections and leaves Flower waiting forever.
+    """
+    if sys.platform == "win32":
+        import ctypes
+        ES_CONTINUOUS, ES_SYSTEM_REQUIRED = 0x80000000, 0x00000001
+        ctypes.windll.kernel32.SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED)
+
+
+def federated_job(name, overrides, group=None, timeout=1800, attempts=2):
+    """Run one Flower simulation in a child process, with a time limit and one retry.
+
+    Each attempt gets a fresh Ray cluster, so one hung simulation can't stall the sweep.
+    """
+    target = group or ("federated" if name.split("_s")[0] in ("fedavg", "fedprox") else "tradeoffs")
+    for attempt in range(1, attempts + 1):
+        if done(target, name):
+            print(f"skip {name} (already in runs/)")
+            return
+        command = [sys.executable, "-m", "fedtraffic.federated", name, json.dumps(overrides)] + ([group] if group else [])
+        try:
+            out = subprocess.run(command, cwd=cfg.ROOT, capture_output=True, text=True, timeout=timeout)
+            line = next((l for l in out.stdout.splitlines() if "test MAE" in l), None)
+            if out.returncode == 0 and line:
+                print(line, flush=True)
+                return
+            print(f"{name}: attempt {attempt} failed (exit {out.returncode}): {out.stderr.strip().splitlines()[-1:]}", flush=True)
+        except subprocess.TimeoutExpired:
+            print(f"{name}: attempt {attempt} timed out after {timeout} s", flush=True)
+        subprocess.run([str(cfg.ROOT / ".venv" / "Scripts" / "ray"), "stop", "--force"], capture_output=True)
+        remove_unfinished(target, name)
+    print(f"{name}: giving up after {attempts} attempts", flush=True)
+
+
+def remove_unfinished(group, name):
+    """Delete the folder of a run that never logged results, so a retry starts clean."""
+    for path in RUNS.glob(f"*_{name}"):
+        meta = json.loads((path / "run.json").read_text(encoding="utf-8"))
+        if meta.get("group") == group and "results" not in meta:
+            shutil.rmtree(path)
 
 
 def done(group, name):
@@ -75,39 +123,37 @@ def local_only(name, overrides):
 
 
 def federated():
-    from .federated import run_federated
     for seed in (0, 1):
         s = {"seed": seed}
         centralised("federated", f"centralised_full_s{seed}", s)
         centralised("federated", f"centralised_cut_s{seed}", s, nodes_from="cut")
         local_only(f"local_only_s{seed}", s)
-        run_federated(f"fedavg_s{seed}", s)
-        run_federated(f"fedprox_s{seed}", {**s, "federated.strategy": "fedprox"})
+        federated_job(f"fedavg_s{seed}", s)
+        federated_job(f"fedprox_s{seed}", {**s, "federated.strategy": "fedprox"})
 
 
 def tradeoffs():
-    from .federated import run_federated
     for epochs in (2, 4):
-        run_federated(f"fedavg_E{epochs}", {"federated.local_epochs": epochs})
-    run_federated("fedavg_half_clients", {"federated.fraction": 0.5, "federated.rounds": 24})
-    run_federated("fedavg_random_partition", {"federated.partition": "random"})
+        federated_job(f"fedavg_E{epochs}", {"federated.local_epochs": epochs})
+    federated_job("fedavg_half_clients", {"federated.fraction": 0.5, "federated.rounds": 24})
+    federated_job("fedavg_random_partition", {"federated.partition": "random"})
     for bits in (16, 8):
-        run_federated(f"fedavg_{bits}bit", {"federated.update_bits": bits})
+        federated_job(f"fedavg_{bits}bit", {"federated.update_bits": bits})
     for mu in (0.1,):
-        run_federated(f"fedprox_mu{mu}", {"federated.strategy": "fedprox", "federated.proximal_mu": mu})
+        federated_job(f"fedprox_mu{mu}", {"federated.strategy": "fedprox", "federated.proximal_mu": mu})
 
 
 def smoke():
     quick = {"train.epochs": 1, "data.train_stride": 60, "data.eval_stride": 60, "federated.rounds": 2}
     centralised("smoke", "gconv_gru", {**quick, "model.name": "gconv_gru"})
-    from .federated import run_federated
-    run_federated("fedavg", quick, group="smoke")
+    federated_job("fedavg", quick, group="smoke")
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("group", choices=("benchmark", "federated", "tradeoffs", "smoke"))
     args = parser.parse_args()
+    keep_awake()
     {"benchmark": benchmark, "federated": federated, "tradeoffs": tradeoffs, "smoke": smoke}[args.group]()
 
 
