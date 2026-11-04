@@ -1,0 +1,37 @@
+# Every setting an experiment depends on. Runs copy this file (with overrides) into their log folder.
+seed: 0
+
+data:
+  raw_dir: data/raw
+  cache_dir: data/processed
+  input_steps: 12          # 1 hour of 5-minute readings in
+  horizon: 12              # 1 hour out
+  split: [0.7, 0.1, 0.2]   # chronological train / validation / test
+  max_gap_fill: 3          # interpolate gaps up to 15 minutes; longer gaps stay missing
+  train_stride: 6          # use every 6th training window (30 min apart) to fit a laptop-CPU budget
+  eval_stride: 3
+  graph:
+    kernel_threshold: 0.1  # Gaussian-kernel weights below this are dropped (Li et al., 2018)
+
+model:
+  name: gconv_gru          # last_value | historical_average | gru | lstm | gconv_mlp | gconv_gru | gconv_lstm
+  hidden: 32
+  diffusion_steps: 2
+
+train:
+  epochs: 12
+  batch_size: 32
+  lr: 0.003
+  grad_clip: 5.0
+  patience: 3
+  threads: 8
+
+federated:
+  clients: 4
+  partition: spatial       # spatial (k-means on sensor locations) | random
+  rounds: 12
+  local_epochs: 1
+  fraction: 1.0            # share of clients sampled each round
+  strategy: fedavg         # fedavg | fedprox
+  proximal_mu: 0.01
+  update_bits: 32          # 32 = full precision, 16/8 = compressed client uploads

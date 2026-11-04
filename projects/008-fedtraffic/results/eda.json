@@ -1,0 +1,28 @@
+{
+  "timesteps": 34272,
+  "sensors": 207,
+  "start": "2012-03-01T00:00",
+  "end": "2012-06-27T23:55",
+  "missing_pct": 8.11,
+  "interpolated_pct": 0.34,
+  "missing_pct_by_split": [
+    7.13,
+    6.96,
+    12.1
+  ],
+  "worst_sensor_missing_pct": 20.1,
+  "sensors_over_20pct_missing": 1,
+  "speed_mean_mph": 58.46,
+  "speed_std_mph": 13.02,
+  "speed_max_mph": 70.0,
+  "edges_incl_self_loops": 1722,
+  "mean_out_degree": 7.32,
+  "split_timesteps": [
+    23990,
+    3428,
+    6854
+  ],
+  "corr_under_2km": 0.743,
+  "corr_over_10km": 0.188,
+  "corr_unconnected": 0.155
+}
