@@ -1,0 +1,43 @@
+{
+ "name": "Thaith",
+ "score": 0.4316,
+ "radius": 0.1,
+ "beta": 0.3,
+ "half_life": 0.04,
+ "force": 10.0,
+ "matrix": [
+  [
+   -0.7578,
+   0.5337,
+   0.5991,
+   -0.6054
+  ],
+  [
+   0.1473,
+   0.2775,
+   0.2187,
+   -0.8075
+  ],
+  [
+   -0.0846,
+   0.4894,
+   0.7345,
+   0.9166
+  ],
+  [
+   0.0229,
+   0.2639,
+   0.6478,
+   0.607
+  ]
+ ],
+ "notes": {
+  "clumping": 12.45,
+  "clusters": 4,
+  "captured": 0.723,
+  "mixing": 0.733,
+  "travel": 1.191,
+  "source": "discovered by --discover (seeds 7, 21, 99)",
+  "score": "mean life score over 6 random starts"
+ }
+}
