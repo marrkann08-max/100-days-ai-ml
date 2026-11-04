@@ -25,7 +25,8 @@ def git_state():
             return subprocess.run(["git", *args], cwd=ROOT, capture_output=True, text=True, timeout=10).stdout.strip()
         except (OSError, subprocess.SubprocessError):
             return ""
-    dirty = git("status", "--porcelain", "--", ".")
+    # Only edits to tracked files count: a new log or notes file does not change the code that ran.
+    dirty = git("status", "--porcelain", "--untracked-files=no", "--", ".")
     return {"commit": git("rev-parse", "HEAD") or "unknown",
             "dirty": bool(dirty), "changed_files": dirty.count("\n") + 1 if dirty else 0}
 
