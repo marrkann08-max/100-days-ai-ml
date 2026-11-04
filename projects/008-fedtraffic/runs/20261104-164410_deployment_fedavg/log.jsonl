@@ -1,0 +1,3 @@
+{"round": 1, "val_mae": 3.57552890413781, "val_rmse": 7.006682938001495, "round_mb": 0.568704, "total_mb": 0.568704, "elapsed_s": 113.63}
+{"round": 2, "val_mae": 3.4282682528502133, "val_rmse": 6.94988852963293, "round_mb": 0.568704, "total_mb": 1.137408, "elapsed_s": 113.63}
+{"round": 3, "val_mae": 3.383091790431019, "val_rmse": 6.864501328872331, "round_mb": 0.568704, "total_mb": 1.706112, "elapsed_s": 113.63}

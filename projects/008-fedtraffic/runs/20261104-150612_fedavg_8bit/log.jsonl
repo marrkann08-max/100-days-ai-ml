@@ -1,0 +1,12 @@
+{"round": 1, "val_mae": 3.575644847929448, "val_rmse": 7.007136755290862, "train_loss": 0.34195307692871, "round_mb": 0.355632, "total_mb": 0.355632, "elapsed_s": 222.19}
+{"round": 2, "val_mae": 3.4279841997320712, "val_rmse": 6.950319721991275, "train_loss": 0.28361256740058677, "round_mb": 0.355632, "total_mb": 0.711264, "elapsed_s": 222.19}
+{"round": 3, "val_mae": 3.3844020854447776, "val_rmse": 6.86438538536285, "train_loss": 0.27871446436326863, "round_mb": 0.355632, "total_mb": 1.066896, "elapsed_s": 222.2}
+{"round": 4, "val_mae": 3.3885626296595035, "val_rmse": 6.820103652322368, "train_loss": 0.275956278167485, "round_mb": 0.355632, "total_mb": 1.422528, "elapsed_s": 222.2}
+{"round": 5, "val_mae": 3.359684193096805, "val_rmse": 6.81036610582234, "train_loss": 0.27398990232069137, "round_mb": 0.355632, "total_mb": 1.77816, "elapsed_s": 222.2}
+{"round": 6, "val_mae": 3.3680617985729753, "val_rmse": 6.7434500824575, "train_loss": 0.2721579341312537, "round_mb": 0.355632, "total_mb": 2.133792, "elapsed_s": 222.2}
+{"round": 7, "val_mae": 3.3429533453966496, "val_rmse": 6.717979345575568, "train_loss": 0.2709567223873691, "round_mb": 0.355632, "total_mb": 2.489424, "elapsed_s": 222.2}
+{"round": 8, "val_mae": 3.3117434070525604, "val_rmse": 6.738242241176472, "train_loss": 0.26965963933260545, "round_mb": 0.355632, "total_mb": 2.845056, "elapsed_s": 222.2}
+{"round": 9, "val_mae": 3.3177765728790467, "val_rmse": 6.70361960006689, "train_loss": 0.2684300351188954, "round_mb": 0.355632, "total_mb": 3.200688, "elapsed_s": 222.2}
+{"round": 10, "val_mae": 3.309484063831195, "val_rmse": 6.694474807863258, "train_loss": 0.26750558843013744, "round_mb": 0.355632, "total_mb": 3.55632, "elapsed_s": 222.2}
+{"round": 11, "val_mae": 3.3172225581481984, "val_rmse": 6.738587443721813, "train_loss": 0.26704937245016513, "round_mb": 0.355632, "total_mb": 3.911952, "elapsed_s": 222.2}
+{"round": 12, "val_mae": 3.2968228016902916, "val_rmse": 6.6837446250120145, "train_loss": 0.2660178483551827, "round_mb": 0.355632, "total_mb": 4.267584, "elapsed_s": 222.2}

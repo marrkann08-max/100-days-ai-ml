@@ -1,0 +1,8 @@
+torch==2.15.0
+flwr[simulation]==1.42.0
+ray==2.55.1
+numpy>=2.2,<3
+pandas>=3,<4
+tables>=3.11,<4
+matplotlib>=3.10,<4
+pyyaml>=6,<7

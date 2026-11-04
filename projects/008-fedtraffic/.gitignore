@@ -6,3 +6,4 @@ runs/*/checkpoint.pt
 experiments.log
 .flwr/
 deploy/logs/
+runs_discarded/*/checkpoint.pt

@@ -1,0 +1,39 @@
+seed: 1
+data:
+  raw_dir: data/raw
+  cache_dir: data/processed
+  input_steps: 12
+  horizon: 12
+  split:
+  - 0.7
+  - 0.1
+  - 0.2
+  max_gap_fill: 3
+  train_stride: 6
+  eval_stride: 3
+  graph:
+    kernel_threshold: 0.1
+model:
+  name: gconv_gru
+  hidden: 32
+  diffusion_steps: 2
+train:
+  epochs: 12
+  batch_size: 32
+  lr: 0.003
+  grad_clip: 5.0
+  patience: 3
+  threads: 8
+federated:
+  clients: 4
+  partition: spatial
+  partition_seed: 0
+  rounds: 12
+  local_epochs: 1
+  fraction: 1.0
+  strategy: fedprox
+  proximal_mu: 0.01
+  update_bits: 32
+  dp_noise: 0.0
+  dp_clip: 3.0
+  dp_uniform: false

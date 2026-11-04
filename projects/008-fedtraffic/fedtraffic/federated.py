@@ -150,10 +150,12 @@ def run_federated(name, overrides, group=None):
     f = config["federated"]
     data = ds.load(config)
     groups = partition(data["locations"], f["clients"], f["partition"], f["partition_seed"])
+    # Each simulated client gets an equal share of the CPU; set before logging so the
+    # run's config.yaml records the value actually used.
+    config["train"]["threads"] = max(1, (os.cpu_count() or 8) // f["clients"])
     run = Run(name, config, group)
     # Ray workers are separate processes: they inherit this, so they can import fedtraffic.
     os.environ["PYTHONPATH"] = os.pathsep.join(filter(None, (str(cfg.ROOT), os.environ.get("PYTHONPATH"))))
-    config["train"]["threads"] = max(1, (os.cpu_count() or 8) // f["clients"])
     out = {}
     start = time.time()
     run_simulation(

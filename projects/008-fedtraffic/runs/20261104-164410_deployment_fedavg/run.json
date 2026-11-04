@@ -1,0 +1,40 @@
+{
+  "name": "deployment_fedavg",
+  "group": "deployment",
+  "started": "2026-11-04T16:44:10",
+  "git": {
+    "commit": "c7656701be97df967b82c9743630d53a0cc0b635",
+    "dirty": false,
+    "changed_files": 0
+  },
+  "versions": {
+    "python": "3.12.16",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "numpy": "2.5.4",
+    "torch": "2.15.0+cpu",
+    "flwr": "1.42.0"
+  },
+  "seed": 0,
+  "duration_s": 118.7,
+  "results": {
+    "test": {
+      "mae": 3.770687074564847,
+      "rmse": 7.406481117067068,
+      "mape": 10.98065876611728,
+      "count": 4969388,
+      "mae@15min": 3.101065712711437,
+      "rmse@15min": 5.899115827902813,
+      "mape@15min": 8.394384802404115,
+      "mae@30min": 3.7341469165218455,
+      "rmse@30min": 7.3440001136821795,
+      "mape@30min": 10.726209425383908,
+      "mae@60min": 4.773161190654428,
+      "rmse@60min": 9.214019414061003,
+      "mape@60min": 14.836872180595213
+    },
+    "params": 17772,
+    "total_mb": 1.706,
+    "train_s": 118.6,
+    "transport": "Flower SuperLink + 4 SuperNode processes over HTTP (TLS off, localhost)"
+  }
+}

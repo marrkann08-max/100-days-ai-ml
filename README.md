@@ -15,20 +15,21 @@ I'm [Keshav](https://keshavmarkan.com), a computer science student at Conestoga 
 | 005 | **Descent** | A *Platform*-inspired tower where NumPy neural-net brains evolve greed or sharing via a genetic algorithm | [Setup & source](projects/005-descent) |
 | 006 | **Holo Window** | Webcam head tracking and off-axis projection turn a laptop screen into a 3D window; Depth Anything turns photos into scenes | [Setup & source](projects/006-holo-window) |
 | 007 | **Primordial** | GPU particle life where a genetic algorithm discovers life-like species on its own | [Setup & source](projects/007-primordial) |
+| 008 | **Federated Traffic Forecasting** | Graph + recurrent networks on METR-LA trained across districts with Flower: benchmarks, communication trade-offs, differential privacy, real deployment, paper | [Report & source](projects/008-fedtraffic) |
 
 The portfolio source lives in [keshav-portfolio](https://github.com/marrkann08-max/keshav-portfolio). The other projects are in this repository.
 
-## Latest experiment — Primordial
+## Latest experiment — Federated Traffic Forecasting
 
-Thousands of coloured particles follow one rule: each colour attracts or repels each other colour. From that alone come cells with membranes, swimming worms and colonies. Instead of hand-tuning rules, a genetic algorithm runs hundreds of random worlds, scores how alive each one looks, and breeds the best into a gallery of discovered species.
+A small research project: can four city districts train one traffic-forecasting model without sharing their sensor data? Graph convolutions and GRU/LSTM encoders written from scratch, federated learning with Flower (simulated and as a real multi-process deployment), 40 logged and reproducible runs, and a paper-style write-up.
 
-![Primordial](projects/007-primordial/assets/gallery.jpg)
+![Federated districts on the METR-LA road graph](projects/008-fedtraffic/results/figures/eda_sensor_map.png)
 
-**Python · OpenGL compute shaders · genetic algorithms · artificial life · moderngl**
+**Python · PyTorch · Flower · graph neural networks · GRU/LSTM · federated learning · differential privacy**
 
-8,000 particles interact all-pairs on integrated laptop graphics at 60 fps; the search runs in the background without dropping a frame.
+The road graph cuts 60-minute error by 6%. FedAvg comes within 2.8% of centralised training while keeping raw data local, 8-bit updates cut communication by 37% for free, and districts differ so much that each training alone does best.
 
-[Run Primordial →](projects/007-primordial/README.md)
+[Read the report →](projects/008-fedtraffic/paper/report.md)
 
 ## Repository layout
 
@@ -39,12 +40,13 @@ projects/
 ├── 004-opcode-canvas/            assembly-driven pixel canvas
 ├── 005-descent/                  evolving greed vs. sharing in a descending-feast tower
 ├── 006-holo-window/              head-tracked 3D window on a laptop screen
-└── 007-primordial/               particle life with evolved species
+├── 007-primordial/               particle life with evolved species
+└── 008-fedtraffic/               federated spatio-temporal traffic forecasting (research project)
 ```
 
 ## Running a project
 
-Each project has its own dependencies and entry point. Open its folder and follow the setup instructions. Ki Forge, Opcode Canvas, Descent, Holo Window and Primordial include dedicated READMEs and automated checks; the traffic navigator includes its Python source and experiment outputs.
+Each project has its own dependencies and entry point. Open its folder and follow the setup instructions. Ki Forge, Opcode Canvas, Descent, Holo Window, Primordial and Federated Traffic Forecasting include dedicated READMEs and automated checks; the traffic navigator includes its Python source and experiment outputs.
 
 ## About the series
 

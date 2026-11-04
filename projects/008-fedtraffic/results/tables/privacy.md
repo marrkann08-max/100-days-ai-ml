@@ -1,0 +1,7 @@
+| Setting | Noise multiplier σ | ε at δ = 1e-5 (12 rounds) | Test MAE | MAE 60min | Final val MAE |
+|---|---|---|---|---|---|
+| Uniform averaging, clipping off, no noise | 0.0 | ∞ (no guarantee) | 3.658 | 4.56 | 3.302 |
+| Central DP, clip C = 3.0 | 0.01 | 61,751.3 | 3.713 | 4.66 | 3.354 |
+| Central DP, clip C = 3.0 | 0.1 | 766.4 | 5.063 | 6.56 | 4.630 |
+| Central DP, clip C = 3.0 | 1.0 | 22.6 | 104.937 | 91.99 | 104.917 |
+| Central DP, clip C = 3.0 | 2.0 | 9.8 | 250.192 | 212.76 | 250.582 |

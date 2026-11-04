@@ -127,3 +127,18 @@ The seed-1 federated runs were therefore a different experiment, not a repeat wi
   4. Windows' default console encoding crashed `flwr run`'s log stream. Forced UTF-8.
   5. By default the SuperLink installed the app's dependencies into a fresh 500 MB environment per run. Disabled, so it reuses the project environment.
 - A 1-round trial completed with all 4 districts reporting and no failures. The full 3-round run is logged under `runs/` (group `deployment`).
+
+---
+
+## 2026-11-04, evening: results complete
+
+- **40 completed runs** on four commits (`4b8c671`, `1f17f22`, `0b4e3d4`, `c765670`), none with uncommitted changes. Four discarded runs are kept in `runs_discarded/`.
+- **Reproducibility.** The same configuration in two different sweeps gave a bit-identical test MAE (3.559956…).
+- **Simulation vs deployment.** The real SuperLink + 4 SuperNodes run matches the Ray simulation's validation MAE to within 0.0002 for rounds 1–3.
+- **Logging fix.** Federated runs' `config.yaml` snapshots show `train.threads: 8`, but each simulated client actually used 4 (CPU count ÷ clients). The override happened after the snapshot was written. The order is now fixed; the results are unaffected.
+- **Write-up.** `paper/report.md`, generated tables and figures, README.
+- **Proposed next steps:**
+  - personalised FL (a shared model plus per-district fine-tuning), since local-only training wins;
+  - a longer training budget, to test whether the 60-minute gap to the historical average closes;
+  - replication on PEMS-BAY;
+  - more, smaller clients, to revisit differential privacy.

@@ -257,8 +257,9 @@ def privacy_figure(runs, bench):
     if ha:
         ax.axhline(ha["results"]["test"]["mae"], color="#999", ls=":", lw=1, label="historical average (no learning)")
     ax.set_xscale("log")
+    ax.set_yscale("log")
     ax.set_xlabel("privacy budget ε (log scale; smaller = more private)")
-    ax.set_ylabel("test MAE (mph)")
+    ax.set_ylabel("test MAE (mph, log scale)")
     ax.set_title("RQ5: the price of district-level differential privacy")
     ax.legend(frameon=False, fontsize=7)
     fig.tight_layout()
@@ -266,21 +267,40 @@ def privacy_figure(runs, bench):
     plt.close(fig)
 
 
+def deployment_table(deploy, fed, summary):
+    """Same algorithm, two transports: Ray simulation vs real SuperLink/SuperNode processes."""
+    run = next((r for r in deploy if r["name"] == "deployment_fedavg"), None)
+    sim = next((r for r in fed if r["name"] == "fedavg_s0"), None)
+    if not run or not sim:
+        return
+    header = ["Round", "Validation MAE, simulation (Ray)", "Validation MAE, deployment (SuperLink + 4 SuperNodes)", "Difference"]
+    rows = []
+    for a, b in zip(sim["log"], run["log"]):
+        rows.append([a["round"], f"{a['val_mae']:.4f}", f"{b['val_mae']:.4f}", f"{b['val_mae'] - a['val_mae']:+.4f}"])
+    write_table("deployment", header, rows)
+    summary["deployment"] = {"rounds": len(run["log"]), "test_mae_after_3_rounds": round(run["results"]["test"]["mae"], 3),
+                             "wall_s": run["results"]["train_s"], "transport": run["results"]["transport"],
+                             "max_abs_val_diff_vs_simulation": round(max(abs(float(r[3])) for r in rows), 4)}
+
+
 def main():
     bench, fed, trade = load_runs("benchmark"), load_runs("federated"), load_runs("tradeoffs")
     priv = load_runs("privacy")
+    deploy = load_runs("deployment")
     for r in priv:
         meta = __import__("json").loads((r["dir"] / "run.json").read_text(encoding="utf-8"))
         if "privacy" in meta:
             r["meta_privacy"] = meta["privacy"]
-    every = bench + fed + trade + priv
-    summary = {"runs": {"benchmark": len(bench), "federated": len(fed), "tradeoffs": len(trade), "privacy": len(priv)},
+    every = bench + fed + trade + priv + deploy
+    summary = {"runs": {"benchmark": len(bench), "federated": len(fed), "tradeoffs": len(trade), "privacy": len(priv),
+                        "deployment": len(deploy)},
                "commits": sorted({r["git"]["commit"][:7] for r in every}),
                "dirty_runs": sum(r["git"]["dirty"] for r in every)}
     benchmark_table(bench, summary)
     federated_table(fed, summary)
     tradeoff_table(fed, trade, summary)
     privacy_table(priv, fed, summary)
+    deployment_table(deploy, fed, summary)
     a = next((r for r in bench if r["name"] == "gconv_gru_s0"), None)
     b = next((r for r in fed if r["name"] == "centralised_full_s0"), None)
     if a and b:   # the same configuration, run twice in different sweeps
