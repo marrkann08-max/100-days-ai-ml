@@ -192,20 +192,53 @@ def run_federated(name, overrides, group=None):
     torch.set_num_threads(os.cpu_count() or 8)
     norm = tuple(float(v) for v in data["norm"])
     val_acc, test_acc = Accumulator(), Accumulator()
+    district_test = []
     for nodes in groups:
         graph = train.subgraph(data, nodes, config["model"]["diffusion_steps"])
         val_acc.merge(train.evaluate(model, graph, train.windows_for(data, config, "val", nodes), norm))
-        test_acc.merge(train.evaluate(model, graph, train.windows_for(data, config, "test", nodes), norm))
+        t = train.evaluate(model, graph, train.windows_for(data, config, "test", nodes), norm)
+        district_test.append(t.result()["mae"])
+        test_acc.merge(t)
     torch.save(model.state_dict(), run.dir / "checkpoint.pt")
     test = test_acc.result()
+    federated_s = round(time.time() - start, 1)
+    extra = {}
+    if f.get("personalise"):
+        extra["personalised"] = personalise(config, data, groups, model.state_dict(), district_test, run)
     if f.get("dp_noise", 0) > 0:
         from .privacy import epsilon
         run.meta["privacy"] = {"noise_multiplier": f["dp_noise"], "clip": f["dp_clip"], "delta": 1e-5,
                                "epsilon": round(epsilon(f["dp_noise"], f["rounds"]), 2), "level": "district"}
-    run.finish(val=val_acc.result(), test=test, params=params, total_mb=round(total_mb, 3),
-               cut_edges=round(cut_edges(data["adjacency"], groups), 4), clients=[len(g) for g in groups],
-               train_s=round(time.time() - start, 1))
-    print(f"{name:<32} test MAE {test['mae']:.3f}  ({total_mb:.1f} MB sent, {time.time() - start:.0f} s)")
+    run.finish(val=val_acc.result(), test=test, test_daily=test_acc.daily(), params=params,
+               total_mb=round(total_mb, 3), cut_edges=round(cut_edges(data["adjacency"], groups), 4),
+               clients=[len(g) for g in groups], district_test_mae=district_test, train_s=federated_s,
+               total_s=round(time.time() - start, 1), **extra)
+    line = f"{name:<32} test MAE {test['mae']:.3f}"
+    if extra:
+        line += f", personalised {extra['personalised']['test']['mae']:.3f}"
+    print(f"{line}  ({total_mb:.1f} MB sent, {time.time() - start:.0f} s)")
+
+
+def personalise(config, data, groups, global_state, district_test, run):
+    """Personalised FL: each district fine-tunes the final global model on its own data.
+
+    Fine-tuning uses the same early stopping as every other run, on the district's own
+    validation split, and keeps the global model if no epoch improves on it. It adds no
+    communication: each district keeps its fine-tuned copy.
+    """
+    tune = cfg.copy_of(config)
+    tune["train"]["threads"] = os.cpu_count() or 8
+    val_acc, test_acc = Accumulator(), Accumulator()
+    for k, nodes in enumerate(groups):
+        tic = time.time()
+        _, v, t = train.fit(tune, data, None, nodes, init=global_state, accumulators=True)
+        run.log(client=k, sensors=len(nodes), global_test_mae=district_test[k],
+                personal_val_mae=v.result()["mae"], personal_test_mae=t.result()["mae"],
+                finetune_s=round(time.time() - tic, 1))
+        val_acc.merge(v)
+        test_acc.merge(t)
+    return {"val": val_acc.result(), "test": test_acc.result(), "test_daily": test_acc.daily(),
+            "threads": tune["train"]["threads"]}
 
 
 if __name__ == "__main__":

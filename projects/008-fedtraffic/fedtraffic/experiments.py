@@ -4,6 +4,8 @@
     python -m fedtraffic.experiments federated      # RQ3: centralised vs local-only vs federated
     python -m fedtraffic.experiments tradeoffs      # RQ4: rounds, local epochs, participation, FedProx, compression
     python -m fedtraffic.experiments privacy        # RQ5: accuracy cost of differential privacy
+    python -m fedtraffic.experiments benchmark_v2   # RQ6: seasonal-aware encoder, trained to convergence
+    python -m fedtraffic.experiments federated_v2   # RQ7: personalised federated learning
     python -m fedtraffic.experiments smoke          # tiny end-to-end check
 """
 import argparse
@@ -12,6 +14,8 @@ import shutil
 import subprocess
 import sys
 import time
+
+import torch
 
 from . import config as cfg
 from . import data as ds
@@ -83,9 +87,15 @@ def centralised(group, name, overrides, nodes_from=None):
     if nodes_from == "cut":
         groups = partition(data["locations"], config["federated"]["clients"], config["federated"]["partition"], config["federated"]["partition_seed"])
         graph = train.block_graph(data, groups, config["model"]["diffusion_steps"])
-    model, val, test = train.fit(config, data, run, nodes, graph)
-    params = sum(p.numel() for p in model.parameters()) if hasattr(model, "parameters") else 0
-    run.finish(val=val, test=test, params=params, train_s=round(time.time() - start, 1))
+    model, val, test_acc = train.fit(config, data, run, nodes, graph, accumulators=True)
+    val, test = val.result(), test_acc.result()
+    extra = {}
+    if hasattr(model, "parameters"):
+        extra["params"] = sum(p.numel() for p in model.parameters())
+        torch.save(model.state_dict(), run.dir / "checkpoint.pt")
+    elif hasattr(model, "settings"):
+        extra["settings"] = model.settings()
+    run.finish(val=val, test=test, test_daily=test_acc.daily(), train_s=round(time.time() - start, 1), **extra)
     print(f"{name:<32} test MAE {test['mae']:.3f}  @15/30/60 {test['mae@15min']:.2f}/{test['mae@30min']:.2f}/{test['mae@60min']:.2f}")
 
 
@@ -97,15 +107,16 @@ def benchmark():
             centralised("benchmark", f"{model}_s{seed}", {"model.name": model, "seed": seed})
 
 
-def local_only(name, overrides):
+def local_only(name, overrides, group="federated"):
     """Each district trains alone on its own sensors; errors pooled over all sensors."""
-    if done("federated", name):
+    if done(group, name):
         print(f"skip {name}")
         return
     from .metrics import Accumulator
     config = cfg.load(overrides=overrides)
     data = ds.load(config)
-    run = Run(name, config, "federated")
+    run = Run(name, config, group)
+    start = time.time()
     f = config["federated"]
     groups = partition(data["locations"], f["clients"], f["partition"], f["partition_seed"])
     norm = tuple(float(v) for v in data["norm"])
@@ -119,7 +130,7 @@ def local_only(name, overrides):
         val_acc.merge(v)
         test_acc.merge(t)
     test = test_acc.result()
-    run.finish(val=val_acc.result(), test=test)
+    run.finish(val=val_acc.result(), test=test, test_daily=test_acc.daily(), train_s=round(time.time() - start, 1))
     print(f"{name:<32} test MAE {test['mae']:.3f}")
 
 
@@ -151,6 +162,34 @@ def privacy():
         federated_job(f"dp_noise{noise}", {"federated.dp_noise": noise}, group="privacy")
 
 
+# Round 2. The v1 models ran out of epochs while still improving (no run early-stopped), and
+# a simple weekly profile beat them at 60 minutes. v2 trains until validation stops improving
+# and adds a seasonal-aware variant that learns the residual on top of the weekly profile.
+LONG = {"model.name": "gconv_lstm", "train.epochs": 50, "train.patience": 5}
+SEASONAL = {**LONG, "model.seasonal": True}
+
+
+def benchmark_v2():
+    for model in ("last_value", "historical_average", "seasonal_residual"):
+        centralised("benchmark_v2", model, {"model.name": model})
+    for seed in SEEDS:
+        centralised("benchmark_v2", f"gconv_lstm_long_s{seed}", {**LONG, "seed": seed})
+        centralised("benchmark_v2", f"gconv_lstm_seasonal_s{seed}", {**SEASONAL, "seed": seed})
+        centralised("benchmark_v2", f"lstm_seasonal_s{seed}", {**SEASONAL, "model.name": "lstm", "seed": seed})
+
+
+def federated_v2():
+    """Seasonal graph LSTM: local-only vs FedAvg vs FedAvg + per-district fine-tuning.
+
+    The centralised reference is benchmark_v2's gconv_lstm_seasonal (same model and budget).
+    40 rounds of one local epoch is close to the centralised runs' epoch count.
+    """
+    fed = {**SEASONAL, "federated.rounds": 40, "federated.personalise": True}
+    for seed in SEEDS:
+        local_only(f"local_only_seasonal_s{seed}", {**SEASONAL, "seed": seed}, group="federated_v2")
+        federated_job(f"fedavg_seasonal_s{seed}", {**fed, "seed": seed}, group="federated_v2", timeout=5400)
+
+
 def smoke():
     quick = {"train.epochs": 1, "data.train_stride": 60, "data.eval_stride": 60, "federated.rounds": 2}
     centralised("smoke", "gconv_gru", {**quick, "model.name": "gconv_gru"})
@@ -159,10 +198,12 @@ def smoke():
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("group", choices=("benchmark", "federated", "tradeoffs", "privacy", "smoke"))
+    groups = {"benchmark": benchmark, "federated": federated, "tradeoffs": tradeoffs, "privacy": privacy,
+              "benchmark_v2": benchmark_v2, "federated_v2": federated_v2, "smoke": smoke}
+    parser.add_argument("group", choices=tuple(groups))
     args = parser.parse_args()
     keep_awake()
-    {"benchmark": benchmark, "federated": federated, "tradeoffs": tradeoffs, "privacy": privacy, "smoke": smoke}[args.group]()
+    groups[args.group]()
 
 
 if __name__ == "__main__":

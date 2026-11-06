@@ -205,9 +205,13 @@ class Windows:
     Batches are assembled on demand instead of materialising every window:
     inputs (B, steps, N, 4) = [normalised speed, observed flag, sin, cos of time of day],
     targets (B, horizon, N) in mph with mask (B, horizon, N) of truly observed values.
+
+    seasonal=True adds a fifth input channel, each reading's deviation from that
+    sensor's training-period weekly profile, and makes `offset` return the profile
+    at the forecast times, so a model learns only the residual on top of it.
     """
 
-    def __init__(self, data, part, steps, horizon, stride=1, nodes=None):
+    def __init__(self, data, part, steps, horizon, stride=1, nodes=None, seasonal=False):
         train_end, val_end = data["split"]
         lo, hi = {"train": (0, train_end), "val": (train_end, val_end), "test": (val_end, len(data["inputs"]))}[part]
         self.nodes = np.arange(data["inputs"].shape[1]) if nodes is None else np.asarray(nodes)
@@ -223,6 +227,16 @@ class Windows:
         self.m = data["observed"][:, n]
         self.slots = data["slots"]
         self.historical = data["historical"][:, n]
+        self.mean, self.std = (float(v) for v in data["norm"])
+        self.seasonal = seasonal
+        if seasonal:
+            profile = (self.historical[self.slots] - self.mean) / self.std
+            deviation = (data["inputs"][:, n] - profile).astype(np.float32)
+            self.x = np.concatenate((self.x, deviation[:, :, None]), axis=2)
+
+    def offset(self, future):
+        """What the model's normalised output is added to: the training mean, or the weekly profile."""
+        return self.historical[self.slots[future]] if self.seasonal else self.mean
 
     def __len__(self):
         return len(self.starts)

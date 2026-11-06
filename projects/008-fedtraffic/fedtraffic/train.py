@@ -8,6 +8,7 @@ import torch
 from . import data as ds
 from . import models
 from .metrics import Accumulator, masked_mae_loss
+from .seasonal import SeasonalResidual
 
 
 def seed_everything(seed):
@@ -15,10 +16,12 @@ def seed_everything(seed):
     torch.manual_seed(seed)
 
 
-def to_tensors(x, y, m, norm):
+def to_tensors(x, y, m, norm, offset=None):
+    """Targets in normalised units, relative to `offset` (the training mean, or the weekly profile)."""
     mean, std = norm
+    offset = mean if offset is None else offset
     return (torch.from_numpy(np.ascontiguousarray(x)),
-            torch.from_numpy(((y - mean) / std).astype(np.float32)),
+            torch.from_numpy(((y - offset) / std).astype(np.float32)),
             torch.from_numpy(m))
 
 
@@ -27,8 +30,8 @@ def train_epoch(model, graph, windows, norm, config, optimizer, rng, prox=None):
     model.train()
     t = config["train"]
     losses = []
-    for x, y, m, _ in windows.batches(t["batch_size"], rng):
-        x, y, m = to_tensors(x, y, m, norm)
+    for x, y, m, future in windows.batches(t["batch_size"], rng):
+        x, y, m = to_tensors(x, y, m, norm, windows.offset(future))
         loss = masked_mae_loss(model(x, graph), y, m)
         if prox is not None:
             reference, mu = prox
@@ -43,29 +46,33 @@ def train_epoch(model, graph, windows, norm, config, optimizer, rng, prox=None):
 
 @torch.no_grad()
 def evaluate(model, graph, windows, norm, batch_size=64):
-    """Accumulated errors in mph against truly observed readings."""
+    """Accumulated errors in mph against truly observed readings, also kept per day of the forecast."""
     acc = Accumulator(windows.horizon)
     mean, std = norm
     if isinstance(model, torch.nn.Module):
         model.eval()
     for x, y, m, future in windows.batches(batch_size):
-        acc.add(predict(model, graph, windows, x, future, mean, std), y, m)
+        days = (future[:, 0] - 1) // ds.STEPS_PER_DAY   # day of the forecast origin
+        acc.add(predict(model, graph, windows, x, future, mean, std), y, m, days)
     return acc
 
 
 def predict(model, graph, windows, x, future, mean, std):
+    if isinstance(model, SeasonalResidual):
+        return model.predict(windows, future)
     if model == "last_value":
         last = x[:, -1, :, 0] * std + mean
         return np.repeat(last[:, None], windows.horizon, axis=1)
     if model == "historical_average":
         return windows.historical[windows.slots[future]]
-    return model(torch.from_numpy(np.ascontiguousarray(x)), graph).numpy() * std + mean
+    return model(torch.from_numpy(np.ascontiguousarray(x)), graph).numpy() * std + windows.offset(future)
 
 
 def windows_for(data, config, part, nodes=None):
     d = config["data"]
     stride = d["train_stride"] if part == "train" else d["eval_stride"]
-    return ds.Windows(data, part, d["input_steps"], d["horizon"], stride, nodes)
+    return ds.Windows(data, part, d["input_steps"], d["horizon"], stride, nodes,
+                      seasonal=bool(config["model"].get("seasonal")))
 
 
 def subgraph(data, nodes, steps=2):
@@ -81,8 +88,13 @@ def block_graph(data, groups, steps=2):
     return models.Graph(adj, steps)
 
 
-def fit(config, data, run=None, nodes=None, graph=None):
-    """Train with early stopping on validation MAE; returns (model, best validation result, test result)."""
+def fit(config, data, run=None, nodes=None, graph=None, init=None, accumulators=False):
+    """Train with early stopping on validation MAE; returns (model, best validation result, test result).
+
+    init: a state dict to start from (e.g. the federated global model, for fine-tuning).
+    The starting model counts as a candidate, so fine-tuning can never make validation error worse.
+    accumulators=True returns the validation and test Accumulators instead of their results.
+    """
     torch.set_num_threads(config["train"]["threads"])
     seed_everything(config["seed"])
     norm = tuple(float(v) for v in data["norm"])
@@ -91,14 +103,25 @@ def fit(config, data, run=None, nodes=None, graph=None):
     splits = {p: windows_for(data, config, p, nodes) for p in ("train", "val", "test")}
     name = config["model"]["name"]
 
+    def finish(model):
+        val, test = (evaluate(model, graph, splits[p], norm) for p in ("val", "test"))
+        return (model, val, test) if accumulators else (model, val.result(), test.result())
+
+    if name == "seasonal_residual":
+        return finish(SeasonalResidual().fit(splits["val"]))
     if name in models.BASELINES:
-        val, test = (evaluate(name, graph, splits[p], norm).result() for p in ("val", "test"))
-        return name, val, test
+        return finish(name)
 
     model = models.build(config)
+    best, best_state = float("inf"), None
+    if init is not None:
+        model.load_state_dict(init)
+        best, best_state = evaluate(model, graph, splits["val"], norm).result()["mae"], copy.deepcopy(init)
+        if run:
+            run.log(epoch=0, val_mae=best)
     optimizer = torch.optim.Adam(model.parameters(), lr=config["train"]["lr"])
     rng = np.random.default_rng(config["seed"])
-    best, best_state, waited = float("inf"), None, 0
+    waited = 0
     for epoch in range(1, config["train"]["epochs"] + 1):
         start = time.time()
         loss = train_epoch(model, graph, splits["train"], norm, config, optimizer, rng)
@@ -113,6 +136,4 @@ def fit(config, data, run=None, nodes=None, graph=None):
             if waited >= config["train"]["patience"]:
                 break
     model.load_state_dict(best_state)
-    val = evaluate(model, graph, splits["val"], norm).result()
-    test = evaluate(model, graph, splits["test"], norm).result()
-    return model, val, test
+    return finish(model)

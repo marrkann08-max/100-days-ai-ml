@@ -143,11 +143,12 @@ class GraphMLP(nn.Module):
 
 
 LEARNED = ("gru", "lstm", "gconv_mlp", "gconv_gru", "gconv_lstm")
-BASELINES = ("last_value", "historical_average")
+BASELINES = ("last_value", "historical_average", "seasonal_residual")
 
 
-def build(config, features=4):
+def build(config, features=None):
     m, d = config["model"], config["data"]
+    features = features or (5 if m.get("seasonal") else 4)
     name, hidden, horizon, steps = m["name"], m["hidden"], d["horizon"], m["diffusion_steps"]
     if name in ("gru", "lstm"):
         return Recurrent(features, hidden, horizon, name)
