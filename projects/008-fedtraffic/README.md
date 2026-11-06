@@ -1,5 +1,7 @@
 # Day 008 — Federated Traffic Forecasting
 
+[![day-008 tests](https://github.com/marrkann08-max/100-days-ai-ml/actions/workflows/day008-tests.yml/badge.svg)](https://github.com/marrkann08-max/100-days-ai-ml/actions/workflows/day008-tests.yml)
+
 Can four city districts train one traffic-forecasting model **without sharing their sensor data**? And what does that cost in accuracy, bandwidth and privacy?
 
 This is a small research project:
@@ -9,6 +11,16 @@ This is a small research project:
 - every result logged, reproducible and written up as a paper.
 
 **→ Read the report: [paper/report.md](paper/report.md)**
+
+## At a glance
+
+- **Personalised federated learning works.** A shared model trained with FedAvg, then fine-tuned in each district, beats every district training alone (95% CI [−0.016, −0.007] mph, better on 19 of 24 test days and in all four districts). It ends within 0.5% of pooling all the raw data, with no raw data leaving a district.
+- **Communication.** 8-bit updates cut traffic by 37% at no accuracy cost, and more local epochs or half the districts per round reach the same accuracy with up to 2.5× less communication.
+- **Privacy.** Differential privacy is unaffordable with four districts: noise strong enough to matter destroys the model. Reported as a negative result.
+- **Real deployment.** The same code runs as a real Flower federation (one SuperLink and four SuperNode processes) and matches the simulation to within 0.0002 mph.
+- **Honest benchmarks.** Learned models beat the historical average and a tuned seasonal forecaster at every horizon, with paired 95% intervals over test days. Round 1's models were under-trained, and that was found and fixed in round 2.
+
+![Paired comparisons with 95% intervals over test days](results/figures/v2_comparisons.png)
 
 ![Sensors, road graph and the four federated districts](results/figures/eda_sensor_map.png)
 
