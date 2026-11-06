@@ -27,7 +27,7 @@ A small research project: can four city districts train one traffic-forecasting 
 
 **Python · PyTorch · Flower · graph neural networks · GRU/LSTM · federated learning · differential privacy**
 
-The road graph cuts 60-minute error by 6%. FedAvg comes within 2.8% of centralised training while keeping raw data local, 8-bit updates cut communication by 37% for free, and districts differ so much that each training alone does best.
+The road graph cuts 60-minute error by 6%. FedAvg comes within 2.8% of centralised training while keeping raw data local, 8-bit updates cut communication by 37% for free, and districts differ so much that each training alone beats one shared model. A second round trains the models for longer (−5.7% error, now beating every seasonal baseline) and shows that personalised federated learning, a shared model fine-tuned in each district, beats every district working alone and comes within 0.5% of pooling all the data, with 95% confidence intervals over test days.
 
 [Read the report →](projects/008-fedtraffic/paper/report.md)
 

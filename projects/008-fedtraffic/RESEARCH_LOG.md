@@ -154,3 +154,24 @@ The seed-1 federated runs were therefore a different experiment, not a repeat wi
 - **Finding:** the seasonal model's 60-minute advantage over the graph LSTM is almost entirely in weekday rush hours (6.06 vs 7.04 mph). Outside rush hours the two are within 0.25 mph.
 - **Robustness fix:** the district evaluation had the seasonal model's lookback (3) and weight (0.45) hard-coded. It now reads them from the seasonal results file. It also stops if the retrained LSTM does not reproduce the logged run's 60-minute test MAE, so the comparison always uses the reported model. All three analyses were rerun after the change and reproduce the committed CSVs byte for byte.
 - **For discussion:** feed the time-of-week profile to the neural model, or train it on the residual from that profile, instead of training it longer.
+
+---
+
+## 2026-11-06, midday: round 2 results
+
+- **Why a round 2.** Round 1 left three open points: no model early-stopped (under-trained), a simple weekly profile beat every model at 60 minutes, and personalised FL was the obvious follow-up to local-only training winning. There were also no confidence intervals on comparisons.
+- **What was added** (commit `230c0bb`): a seasonal-aware encoder (deviation from the weekly profile as input, residual as target), the seasonal-residual forecaster inside the pipeline, per-district fine-tuning after FedAvg, and per-day error records for paired bootstrap intervals over test days. 9 new tests; 30 in total.
+- **Runs:** 12, on commits `230c0bb` and `25fbe04`, none with uncommitted changes. The full plan (3 seeds everywhere) did not fit the compute window, so the order was set by priority: the seasonal graph LSTM has 3 seeds, the federated settings 2, and the other new models 1.
+- **Results:**
+  - A 50-epoch budget improves the graph LSTM by 5.7% (3.522 → 3.320 mph). It was still improving at epoch 50.
+  - Every learned model now beats the historical average and the seasonal-residual forecaster at every horizon.
+  - The seasonal encoder is best at 60 minutes (3.838) but worse at short horizons; overall +0.073 mph [+0.045, +0.101] against the plain model.
+  - The graph still helps with seasonal inputs: −0.080 mph, better on 24 of 24 days.
+  - FedAvg costs 1.0% against centralised training (round 1: 2.8%).
+  - **Personalised FL is the best privacy-preserving setting:** better than local-only (−0.011 mph [−0.016, −0.007], 19 of 24 days) and in all four districts; 0.5% from centralised.
+- **Incident:** the sweep was restarted once to reorder runs; the one interrupted run folder (no results) was deleted before the restart. No finished run was affected.
+- **For discussion:**
+  - train the plain graph LSTM beyond 50 epochs, to see whether its 60-minute error catches the seasonal encoder;
+  - a model that combines both, e.g. seasonal inputs with a non-residual target;
+  - more seeds for the federated comparison, and PEMS-BAY for replication;
+  - many smaller clients, to revisit differential privacy.

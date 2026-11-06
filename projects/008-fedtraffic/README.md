@@ -18,12 +18,14 @@ This is a small research project:
 |---|---|
 | GRU or LSTM? | With the road graph, LSTM wins slightly at every horizon (MAE 2.98 / 3.54 / 4.32 mph at 15 / 30 / 60 min). Without it they tie. |
 | Does the road graph help? | Yes, most at long horizons: −6% MAE at 60 minutes for both encoders. |
-| Federated vs centralised? | FedAvg is 2.8% worse than pooling all the data (3.654 vs 3.556), and only 0.6 of that comes from losing road links between districts. |
-| Is collaboration worth it? | Not with one shared model. Each district training alone is best (3.507), because districts differ a lot. FedProx, which pulls districts together, does worse. |
+| Federated vs centralised? | FedAvg is 2.8% worse than pooling all the data (3.654 vs 3.556), and only 0.6 of that comes from losing road links between districts. With the better round-2 model the gap is 1.0%. |
+| Is collaboration worth it? | Not with one shared model: districts differ a lot, so each training alone beats FedAvg, and FedProx does worse. **Personalised FL fixes this (round 2):** FedAvg followed by fine-tuning in each district beats every district alone (−0.011 mph, 95% CI [−0.016, −0.007], better on 19 of 24 test days) and ends within 0.5% of pooling all the raw data. |
 | Communication trade-offs? | 8-bit updates cut traffic by 37% at no accuracy cost. More local epochs or half the districts per round reach the target with up to 2.5× less communication. |
 | Differential privacy? | Unaffordable with 4 districts: noise giving meaningful privacy (ε ≈ 10–23) destroys the model. |
 | Simulation vs real deployment? | A real SuperLink + 4 SuperNode run matches the simulation to within 0.0002 mph. |
-| Honest limit | Under a laptop-CPU budget, a simple historical average still beats every neural model at 60 minutes. Correcting it with recent deviations (4.10 mph) widens the gap, almost entirely in rush hours. |
+| Were the models trained enough? | Not in round 1: no run early-stopped. With a 50-epoch budget (round 2) the graph LSTM improves 5.7% (3.52 → 3.32 mph) and now beats the historical average and a tuned seasonal-residual forecaster at every horizon. |
+| Does knowing the weekly pattern help? | At long range, yes: a graph LSTM that learns the residual on top of each sensor's weekly profile is the best model at 60 minutes (3.84 mph), but it is worse at short horizons. |
+| How sure are these differences? | Round 2 compares methods on the same test readings, with 95% intervals from resampling the 24 test days (Table 10 in the report). |
 
 ## How this maps to the work
 
@@ -50,7 +52,7 @@ Needs Windows/macOS/Linux and about 2 GB for PyTorch. On Windows, Flower's simul
 uv python install 3.12
 uv venv --python 3.12 .venv
 uv pip install --python .venv\Scripts\python.exe -r requirements.txt
-.venv\Scripts\python -m unittest discover -s tests       # 21 tests
+.venv\Scripts\python -m unittest discover -s tests       # 30 tests
 .venv\Scripts\python -m fedtraffic.eda                   # downloads + verifies the data, exploratory figures
 ```
 
@@ -62,7 +64,9 @@ Then the experiments, each resumable (finished runs are skipped):
 .venv\Scripts\python -m fedtraffic.experiments tradeoffs   # ~40 min
 .venv\Scripts\python -m fedtraffic.experiments privacy     # ~30 min
 .venv\Scripts\python deploy\run_local.py                   # real Flower federation, ~2 min
-.venv\Scripts\python -m fedtraffic.report                  # regenerate every table and figure
+.venv\Scripts\python -m fedtraffic.report                  # regenerate every round-1 table and figure
+.venv\Scripts\python -m fedtraffic.experiments round2      # round 2: longer training, seasonal encoder, personalised FL (~1.5 h)
+.venv\Scripts\python -m fedtraffic.report_v2               # round-2 tables, figures and paired confidence intervals
 ```
 
 Every setting is in `configs/default.yaml`. The sweeps keep the machine awake while they run, and each Flower simulation runs in its own process with a timeout, so one hung run can't stall the rest.
@@ -82,6 +86,9 @@ fedtraffic/
   tracking.py             run logging tied to git
   experiments.py          the named sweeps
   report.py               tables, figures, summary.json from the logs
+  report_v2.py            round-2 tables, figures, paired intervals (summary_v2.json)
+  seasonal.py             seasonal-residual forecaster (no training, settings chosen on validation)
+  stats.py                day-level paired bootstrap for comparing two methods
 deploy/                   Flower App + local SuperLink/SuperNode launcher
 runs/                     one folder per experiment run (config, run.json, log.jsonl)
 runs_discarded/           runs invalidated by a bug, kept for the record

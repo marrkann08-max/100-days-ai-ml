@@ -24,7 +24,7 @@ LABELS = {
     "historical_average": "Historical average (weekly profile)",
     "seasonal_residual": "Seasonal-residual (no training)",
     "gconv_lstm_v1": "Graph LSTM, v1 budget (12 epochs)",
-    "gconv_lstm_long": "Graph LSTM, trained to convergence",
+    "gconv_lstm_long": "Graph LSTM, 50-epoch budget",
     "lstm_seasonal": "Seasonal LSTM, no graph",
     "gconv_lstm_seasonal": "Seasonal graph LSTM",
     "centralised": "Centralised (all raw data pooled)",
@@ -204,17 +204,24 @@ def figures(m, forest, districts):
                         "gconv_lstm_seasonal") if k in m]
     if keys:
         fig, ax = plt.subplots(figsize=(6.4, 3.6))
+        ends = {}
         for i, key in enumerate(keys):
             y = m[key].per_step()
             ax.plot(minutes, y, color=SERIES[i], lw=2, marker="o", ms=3.5, label=m[key].label())
-            ax.annotate(f"{y[-1]:.2f}", (minutes[-1], y[-1]), xytext=(5, 0), textcoords="offset points",
+            ends[key] = y[-1]
+        # End labels, nudged apart so close values stay readable.
+        placed = []
+        for key, v in sorted(ends.items(), key=lambda kv: kv[1]):
+            pos = max(v, placed[-1] + 0.07) if placed else v
+            placed.append(pos)
+            ax.annotate(f"{v:.2f}", (minutes[-1], v), xytext=(minutes[-1] + 2.5, pos), textcoords="data",
                         va="center", fontsize=7, color=MUTED)
         ax.set_xticks([5, 15, 30, 45, 60])
-        ax.set_xlim(3, 67)
+        ax.set_xlim(3, 69)
         ax.set_xlabel("forecast horizon (minutes)")
         ax.set_ylabel("test MAE (mph)")
-        ax.set_title("Error by horizon (v2, mean of 3 seeds for learned models)", loc="left")
-        ax.legend(fontsize=7, loc="upper left")
+        ax.set_title("Test error by horizon (v2; seasonal graph LSTM is the mean of 3 seeds)", loc="left")
+        ax.legend(fontsize=7, loc="lower right")
         fig.tight_layout()
         fig.savefig(FIGURES / "v2_horizons.png")
         plt.close(fig)
@@ -251,7 +258,7 @@ def figures(m, forest, districts):
         ax.set_xticks(x, [f"D{k + 1} ({n} sensors)" for k, n in enumerate(sizes)])
         ax.grid(axis="x", visible=False)
         ax.set_ylabel("test MAE (mph)")
-        ax.set_title("Per-district test error (mean of 3 seeds)", loc="left")
+        ax.set_title(f"Per-district test error (mean of {len(m['fedavg'].runs)} seeds)", loc="left")
         ax.legend(fontsize=7, ncol=3, loc="upper left")
         ax.set_ylim(0, max(local.max(), glob.max(), pers.max()) * 1.18)
         fig.tight_layout()
@@ -274,7 +281,7 @@ def figures(m, forest, districts):
                     fontsize=7, color=MUTED)
         ax.set_xlabel("epoch")
         ax.set_ylabel("validation MAE (mph)")
-        ax.set_title("Training to convergence (seed 0, early stopping, patience 5)", loc="left")
+        ax.set_title("Validation curves, seed 0 (up to 50 epochs, early stopping with patience 5)", loc="left")
         ax.legend(fontsize=7)
         fig.tight_layout()
         fig.savefig(FIGURES / "v2_training_curves.png")

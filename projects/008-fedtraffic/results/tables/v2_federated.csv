@@ -1,0 +1,6 @@
+Setting,Seeds,MAE 15 min,MAE 30 min,MAE 60 min,MAE (all),Raw data leaves district?,Communication (MB)
+Seasonal-residual (no training),1,3.370,3.763,4.104,3.690,no,0
+Centralised (all raw data pooled),3,3.063 ± 0.003,3.470 ± 0.003,3.838 ± 0.003,3.393 ± 0.002,yes,0
+Local only (each district alone),2,3.091 ± 0.000,3.500 ± 0.004,3.864 ± 0.014,3.420 ± 0.005,no,0
+FedAvg (one shared model),2,3.086 ± 0.004,3.510 ± 0.013,3.878 ± 0.012,3.428 ± 0.010,no,31.0
+FedAvg + local fine-tuning (personalised),2,3.077 ± 0.003,3.487 ± 0.009,3.853 ± 0.006,3.409 ± 0.005,no,31.0

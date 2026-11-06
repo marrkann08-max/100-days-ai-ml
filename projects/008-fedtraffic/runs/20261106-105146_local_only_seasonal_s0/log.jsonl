@@ -1,0 +1,4 @@
+{"client": 0, "sensors": 61, "val_mae": 3.5472528384431694, "test_mae": 3.6162589112806045, "elapsed_s": 91.13}
+{"client": 1, "sensors": 54, "val_mae": 3.6006238630894836, "test_mae": 3.829548413436102, "elapsed_s": 228.46}
+{"client": 2, "sensors": 52, "val_mae": 3.499481236076053, "test_mae": 3.8633332393024196, "elapsed_s": 323.23}
+{"client": 3, "sensors": 40, "val_mae": 2.015739390781986, "test_mae": 2.0416742400213104, "elapsed_s": 456.25}

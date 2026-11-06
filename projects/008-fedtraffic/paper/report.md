@@ -2,7 +2,7 @@
 
 **Keshav Markan** · Bachelor of Computer Science, Conestoga College · November 2026
 
-*Every number in this report is generated from logged runs: §5.1–5.5 by `python -m fedtraffic.report`, and the follow-up analyses in §5.6 by the scripts in `analysis/`. Tables are in `results/tables/`, figures in `results/figures/`, and the run logs (config, git commit, metrics per epoch or round) in `runs/`.*
+*Every number in this report is generated from logged runs: §5.1–5.5 by `python -m fedtraffic.report`, the follow-up analyses in §5.6 by the scripts in `analysis/`, and round 2 (§5.7) by `python -m fedtraffic.report_v2`. Tables are in `results/tables/`, figures in `results/figures/`, and the run logs (config, git commit, metrics per epoch or round) in `runs/`.*
 
 ---
 
@@ -22,6 +22,11 @@ We forecast freeway speeds 15, 30 and 60 minutes ahead at 207 Los Angeles sensor
 - District-level differential privacy is unaffordable with four clients: noise giving ε ≈ 10–23 destroys the model.
 - A real deployment (one SuperLink, four SuperNode processes) reproduces the simulated validation curve to within 0.0002 mph.
 
+**Round 2** (models trained for longer, paired 95% intervals over the 24 test days):
+- A 50-epoch budget instead of 12 lowers the graph LSTM's test MAE from 3.52 to 3.32 mph, and its 60-minute MAE from 4.32 to 3.96. The models now beat the historical average and a tuned seasonal-residual forecaster at every horizon.
+- A seasonal-aware graph LSTM (learning the residual on top of each sensor's weekly profile) is the best model at 60 minutes (3.84 mph, −0.13 [−0.18, −0.06] against the plain model), but worse at short horizons.
+- With this model, FedAvg is only 1.0% worse than centralised training (3.43 vs 3.39). **Personalised FL** (FedAvg, then fine-tuning in each district) is the best privacy-preserving setting. It beats every district training alone (−0.011 mph [−0.016, −0.007], better on 19 of 24 days) and comes within 0.5% of pooling all the raw data.
+
 ## 1. Introduction
 
 Traffic sensors are often operated by different agencies, and finer-grained mobility data is personal. Training one forecasting model therefore increasingly means training **without pooling raw data**. Federated learning (FL) trains a shared model by exchanging only model updates (McMahan et al., 2017).
@@ -37,6 +42,8 @@ We ask five questions:
 - **RQ3:** How close does federated training get to centralised training, and does it beat districts training alone?
 - **RQ4:** How do local computation, client participation, partitioning and update compression trade accuracy against communication?
 - **RQ5:** What does a formal (differential) privacy guarantee cost at this scale?
+- **RQ6 (round 2):** With an adequate training budget, do the learned models beat strong seasonal baselines, and does an explicitly seasonal encoder help?
+- **RQ7 (round 2):** Does personalised federated learning (a shared model fine-tuned in each district) beat both a single shared model and districts working alone?
 
 ## 2. Related work
 
@@ -122,6 +129,15 @@ All learned models map (batch, 12, sensors, 4) to (batch, 12, sensors). Their we
 - **Run logs:** every run records its configuration, git commit, an uncommitted-changes flag, package versions, seed and per-epoch or per-round metrics.
 - **This study:** 40 completed runs on four commits, none with uncommitted changes. One configuration was run in two different sweeps and gave a bit-identical test MAE (3.559956…).
 - **Discarded runs:** four runs affected by a partition bug (§7) are kept in `runs_discarded/` rather than deleted.
+- **Round 2:** 12 further runs on two commits (`230c0bb`, `25fbe04`), none with uncommitted changes. The code is unchanged for round-1 settings, and the in-pipeline seasonal-residual baseline reproduces the standalone analysis exactly (60-minute MAE 4.103859, a unit test).
+
+### 4.5 Round 2 additions
+
+- **Training budget.** Up to 50 epochs with early stopping (patience 5) instead of 12 epochs (patience 3). Everything else is unchanged.
+- **Seasonal-aware encoder.** Each input step gets a fifth channel: the reading's deviation from that sensor's training-period weekly profile. The model predicts the residual, which is added back to the profile at the forecast times. The graph LSTM architecture is otherwise identical.
+- **Seasonal-residual baseline.** The weekly profile plus a weighted mean of the deviation over the last k readings, with k and the weight chosen per horizon step on validation data. It has no trained parameters and needs only a sensor's own history.
+- **Personalised FL.** After 40 rounds of FedAvg (one local epoch each), every district fine-tunes the final global model on its own data, with the same early stopping on its own validation split. The global model is kept if no epoch improves on it. This adds no communication.
+- **Paired intervals.** Every evaluation keeps per-day error sums. Two methods are compared on the same test readings, resampling the 24 test days (10,000 bootstrap resamples) for a 95% interval on the difference in pooled MAE. Days, not windows, are the unit because errors within a day are strongly correlated.
 
 ## 5. Results
 
@@ -261,6 +277,59 @@ Almost all of the gap is in rush hours, where the seasonal-residual forecaster i
 
 **Communication budgets.** §5.3 measured the communication needed to reach one target. `paper/communication_budget.md` asks instead which of seven logged FedAvg configurations has the lowest validation MAE when training must stop at a fixed budget (0.5–7 MB), taking the last round that fits with no retrospective checkpoint selection. Half participation leads at four of six budgets and four local epochs at the other two. This is descriptive: each modified configuration has one seed, the budget grid was chosen after the runs, and the scores are on validation data.
 
+### 5.7 Round 2: training budget, a seasonal encoder and personalised FL (RQ6–RQ7)
+
+**Table 8.** Test MAE (mph), centralised, full graph. Learned models use the graph LSTM unless stated.
+
+| Model | Seeds | 15 min | 30 min | 60 min | All | Epochs run (best) |
+|---|---|---|---|---|---|---|
+| Graph LSTM, 12-epoch budget (round 1, Table 1) | 3 | 2.982 | 3.536 | 4.316 | 3.522 | 12 (12) |
+| Historical average (weekly profile) | – | 4.196 | 4.196 | 4.197 | 4.193 | – |
+| Seasonal-residual (no training) | – | 3.370 | 3.763 | 4.104 | 3.690 | – |
+| Graph LSTM, 50-epoch budget | 1 | **2.892** | **3.344** | 3.964 | **3.320** | 50 (50) |
+| Seasonal LSTM, no graph | 1 | 3.130 | 3.562 | 3.920 | 3.472 | 29 (24) |
+| Seasonal graph LSTM | 3 | 3.063 ± 0.003 | 3.470 ± 0.003 | **3.838 ± 0.003** | 3.393 ± 0.002 | 26–40 (21–35) |
+
+![Figure 12](../results/figures/v2_horizons.png)
+
+- **The round-1 models were under-trained, as suspected.** With a 50-epoch budget the same graph LSTM reaches 3.320 mph, 5.7% better than round 1, and 3.964 at 60 minutes. Its validation error was still falling at epoch 50 (Figure 13), so even this is not fully converged.
+- **The 60-minute gap is closed.** Every learned model now beats the historical average and the tuned seasonal-residual forecaster at every horizon. The seasonal graph LSTM beats the seasonal-residual forecaster on all 24 test days.
+- **The seasonal encoder is a trade-off, not a free gain.** It is the best model at 60 minutes, but worse at 5–30 minutes. Overall it is 0.073 mph worse than the plain model on the 50-epoch budget. It also stops improving much earlier (21–35 epochs against 50+), so its advantage at 60 minutes may narrow with even longer training of the plain model.
+- **The road graph still matters with seasonal inputs:** −0.080 mph overall, better on all 24 days.
+
+![Figure 13](../results/figures/v2_training_curves.png)
+
+**Table 9.** Federated learning with the seasonal graph LSTM. Test MAE (mph); federated settings use 2 seeds, centralised 3.
+
+| Setting | 15 min | 30 min | 60 min | All | Raw data leaves district? | Communication |
+|---|---|---|---|---|---|---|
+| Centralised (all raw data pooled) | 3.063 | 3.470 | 3.838 | **3.393** | yes | – |
+| Local only (each district alone) | 3.091 | 3.500 | 3.864 | 3.420 | no | 0 |
+| FedAvg, 40 rounds | 3.086 | 3.510 | 3.878 | 3.428 | no | 31.0 MB |
+| **FedAvg + local fine-tuning (personalised)** | 3.077 | 3.487 | 3.853 | **3.409** | no | 31.0 MB |
+
+**Table 10.** Paired differences in test MAE (mph), with 95% intervals from resampling the 24 test days. Negative means A is better.
+
+| A vs B | All horizons | 60 min | Days A better (all horizons) |
+|---|---|---|---|
+| Seasonal graph LSTM vs 50-epoch graph LSTM | +0.073 [+0.045, +0.101] | −0.126 [−0.184, −0.063] | 4 / 24 |
+| Seasonal graph LSTM vs seasonal-residual forecaster | −0.298 [−0.321, −0.273] | −0.265 [−0.290, −0.241] | 24 / 24 |
+| Seasonal graph LSTM vs no graph | −0.080 [−0.096, −0.064] | −0.081 [−0.102, −0.062] | 24 / 24 |
+| FedAvg vs centralised | +0.035 [+0.026, +0.044] | +0.039 [+0.028, +0.052] | 0 / 24 |
+| FedAvg vs local only | +0.008 [+0.001, +0.014] | +0.013 [+0.004, +0.023] | 9 / 24 |
+| **Personalised vs local only** | **−0.011 [−0.016, −0.007]** | **−0.011 [−0.017, −0.004]** | 19 / 24 |
+| Personalised vs FedAvg | −0.019 [−0.023, −0.015] | −0.024 [−0.030, −0.018] | 23 / 24 |
+| Personalised vs centralised | +0.016 [+0.008, +0.025] | +0.015 [+0.005, +0.026] | 6 / 24 |
+
+![Figure 14](../results/figures/v2_comparisons.png)
+
+- **The cost of federation shrinks with a better model:** FedAvg is 1.0% worse than centralised training here, against 2.8% in round 1.
+- **The round-1 finding holds:** a single shared model is still slightly worse than each district training alone (+0.008 mph, interval excluding zero).
+- **Personalised FL resolves it.** Fine-tuning the shared model in each district beats local-only training in all four districts (Figure 15) and on 19 of 24 days, and beats plain FedAvg on 23 of 24 days. It closes 40% of the gap between local-only and centralised training, ending 0.5% from pooling all raw data, without any raw data leaving a district and with no extra communication.
+- **The effects are small in absolute terms** (hundredths of a mph), but they are consistent across days, districts and seeds, which is what the paired intervals show.
+
+![Figure 15](../results/figures/v2_districts.png)
+
 ## 6. Discussion
 
 - **For forecasting,** graph-recurrent encoders are clearly better than recurrent-only ones on short and medium horizons, and the LSTM variant is marginally best.
@@ -269,7 +338,7 @@ Almost all of the gap is in rush hours, where the seasonal-residual forecaster i
   - a random (more homogeneous) partition beats a geographic one despite cutting six times more edges;
   - FedProx, which suppresses drift towards local optima, hurts.
 - **For practitioners:**
-  - prefer personalisation over a single global model;
+  - prefer personalisation over a single global model. Round 2 confirms this: fine-tuning the shared model per district is the best privacy-preserving setting (§5.7);
   - spend extra compute on more local epochs rather than more rounds when communication is the bottleneck;
   - compress uploads, since 8-bit costs nothing measurable here.
 - **For hour-ahead forecasts,** a seasonal profile corrected by recent deviations is a strong, cheap baseline. It is also trivially federated, since each sensor needs only its own history. Its advantage over the neural model is concentrated in rush hours (§5.6).
@@ -277,6 +346,7 @@ Almost all of the gap is in rush hours, where the seasonal-residual forecaster i
 ## 7. Limitations
 
 - **Compute budget.** Models are small (hidden size 32), trained on one-sixth of the windows for at most 12 epochs, and never early-stopped. Absolute errors are therefore well above the published state of the art (DCRNN: 2.77 / 3.15 / 3.60), and the historical average beats every learned model at 60 minutes. Conclusions are about *relative* comparisons under one shared budget.
+- **Round 2 is partial.** It covers the graph LSTM only. The 50-epoch plain model and the no-graph seasonal model have one seed each, and the federated settings two. The 50-epoch plain model had not finished improving, so the comparison with the seasonal encoder may shift with a larger budget.
 - **Few seeds.** The benchmark uses 3 seeds and the federated comparison 2. The trade-off and privacy sweeps use one seed each, which is enough for large effects but not for differences of about 0.01 mph.
 - **One dataset and one partition granularity** (4 districts). With more clients the heterogeneity and DP conclusions may change. PEMS-BAY is the natural replication.
 - **Non-autoregressive decoder.** One linear head predicts all 12 steps, which is simpler but weaker than DCRNN's sequence-to-sequence decoder.
@@ -311,6 +381,8 @@ uv pip install --python .venv\Scripts\python.exe -r requirements.txt
 .venv\Scripts\python analysis\day008_seasonal_residual.py data\processed\metr-la-828dd9de4670.npz results\tables\day008_seasonal_results.csv
 .venv\Scripts\python analysis\day008_district_evaluation.py . results\tables\day008_district_results.csv   # retrains the LSTM, ~5 min
 .venv\Scripts\python analysis\day008_budget_analysis.py . results\tables\day008_budget_results.csv
+.venv\Scripts\python -m fedtraffic.experiments round2     # round 2, about 1.5 hours
+.venv\Scripts\python -m fedtraffic.report_v2              # Tables 8–10, Figures 12–15
 ```
 
 ## References

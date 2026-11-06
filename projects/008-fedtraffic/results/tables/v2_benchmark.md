@@ -1,0 +1,9 @@
+| Model | Seeds | MAE 15 min | MAE 30 min | MAE 60 min | MAE (all) | Epochs run (best) | Train time, median (s) |
+|---|---|---|---|---|---|---|---|
+| Graph LSTM, v1 budget (12 epochs) (v1, for reference) | 3 | 2.982 | 3.536 | 4.316 | 3.522 | 12 (12) | 305 |
+| Last value (persistence) | 1 | 3.482 | 4.166 | 5.316 | 4.202 | – | 0 |
+| Historical average (weekly profile) | 1 | 4.196 | 4.196 | 4.197 | 4.193 | – | 0 |
+| Seasonal-residual (no training) | 1 | 3.370 | 3.763 | 4.104 | 3.690 | – | 0 |
+| Graph LSTM, 50-epoch budget | 1 | 2.892 | 3.344 | 3.964 | 3.320 | 50 (50) | 1006 |
+| Seasonal LSTM, no graph | 1 | 3.130 | 3.562 | 3.920 | 3.472 | 29 (24) | 188 |
+| Seasonal graph LSTM | 3 | 3.063 ± 0.003 | 3.470 ± 0.003 | 3.838 ± 0.003 | 3.393 ± 0.002 | 40 (35), 31 (26), 26 (21) | 692 |
