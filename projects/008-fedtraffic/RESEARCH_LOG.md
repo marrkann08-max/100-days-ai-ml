@@ -142,3 +142,15 @@ The seed-1 federated runs were therefore a different experiment, not a repeat wi
   - a longer training budget, to test whether the 60-minute gap to the historical average closes;
   - replication on PEMS-BAY;
   - more, smaller clients, to revisit differential privacy.
+
+---
+
+## 2026-11-06: follow-up analyses folded into the report
+
+- Three follow-up analyses (`analysis/`) are now in the report as §5.6:
+  - a seasonal-residual forecaster, which beats every model at 60 minutes (4.104 mph);
+  - a paired comparison with the graph LSTM by district and period;
+  - a fixed-budget comparison of the communication sweeps.
+- **Finding:** the seasonal model's 60-minute advantage over the graph LSTM is almost entirely in weekday rush hours (6.06 vs 7.04 mph). Outside rush hours the two are within 0.25 mph.
+- **Robustness fix:** the district evaluation had the seasonal model's lookback (3) and weight (0.45) hard-coded. It now reads them from the seasonal results file. It also stops if the retrained LSTM does not reproduce the logged run's 60-minute test MAE, so the comparison always uses the reported model. All three analyses were rerun after the change and reproduce the committed CSVs byte for byte.
+- **For discussion:** feed the time-of-week profile to the neural model, or train it on the residual from that profile, instead of training it longer.

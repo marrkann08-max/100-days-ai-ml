@@ -23,7 +23,7 @@ This is a small research project:
 | Communication trade-offs? | 8-bit updates cut traffic by 37% at no accuracy cost. More local epochs or half the districts per round reach the target with up to 2.5× less communication. |
 | Differential privacy? | Unaffordable with 4 districts: noise giving meaningful privacy (ε ≈ 10–23) destroys the model. |
 | Simulation vs real deployment? | A real SuperLink + 4 SuperNode run matches the simulation to within 0.0002 mph. |
-| Honest limit | Under a laptop-CPU budget, a simple historical average still beats every neural model at 60 minutes. |
+| Honest limit | Under a laptop-CPU budget, a simple historical average still beats every neural model at 60 minutes. Correcting it with recent deviations (4.10 mph) widens the gap, almost entirely in rush hours. |
 
 ## How this maps to the work
 
@@ -97,7 +97,7 @@ METR-LA (Li et al., 2018), downloaded from public Hugging Face mirrors and verif
 ## Seasonal-residual forecasting and communication budgets
 
 - The [seasonal-residual model](analysis/day008_seasonal_residual.py) adjusts each sensor's historical weekly profile using recent observed deviations. The lookback and adjustment weights are selected on validation data. At 60 minutes its test MAE is 4.104 mph. See the [results by horizon](results/tables/day008_seasonal_results.csv).
-- The [paired evaluation](analysis/day008_district_evaluation.py) retrains the seed-0 graph LSTM and scores both models on the same 60-minute test windows. The seasonal model reduces weekday rush-hour MAE from 7.045 to 6.064 mph, with improvements in all four districts. Rush hour uses the dataset clock, weekdays 07:00–10:00 and 16:00–19:00. See the [district results](results/tables/day008_district_results.csv).
+- The [paired evaluation](analysis/day008_district_evaluation.py) retrains the seed-0 graph LSTM, checks that it reproduces the logged run's test MAE, takes the seasonal model's 60-minute settings from the seasonal results file, and scores both models on the same 60-minute test windows. The seasonal model reduces weekday rush-hour MAE from 7.045 to 6.064 mph, with improvements in all four districts. Rush hour uses the dataset clock, weekdays 07:00–10:00 and 16:00–19:00. See the [district results](results/tables/day008_district_results.csv).
 - The [communication budget analysis](paper/communication_budget.md) compares the last completed round each configuration can afford under six bandwidth budgets.
 
 Run from the project directory using the project's Python environment. Replace the cache path with the processed METR-LA cache for the default configuration if needed.
