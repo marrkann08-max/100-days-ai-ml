@@ -93,3 +93,17 @@ PLAN.md · DATA_CARD.md · RESEARCH_LOG.md
 ## Data
 
 METR-LA (Li et al., 2018), downloaded from public Hugging Face mirrors and verified by SHA-256. Raw data is not committed. See [DATA_CARD.md](DATA_CARD.md) for provenance, licences, known issues and privacy notes.
+
+## Seasonal-residual forecasting and communication budgets
+
+- The [seasonal-residual model](analysis/day008_seasonal_residual.py) adjusts each sensor's historical weekly profile using recent observed deviations. The lookback and adjustment weights are selected on validation data. At 60 minutes its test MAE is 4.104 mph. See the [results by horizon](results/tables/day008_seasonal_results.csv).
+- The [paired evaluation](analysis/day008_district_evaluation.py) retrains the seed-0 graph LSTM and scores both models on the same 60-minute test windows. The seasonal model reduces weekday rush-hour MAE from 7.045 to 6.064 mph, with improvements in all four districts. Rush hour uses the dataset clock, weekdays 07:00–10:00 and 16:00–19:00. See the [district results](results/tables/day008_district_results.csv).
+- The [communication budget analysis](paper/communication_budget.md) compares the last completed round each configuration can afford under six bandwidth budgets.
+
+Run from the project directory using the project's Python environment. Replace the cache path with the processed METR-LA cache for the default configuration if needed.
+
+```powershell
+python analysis/day008_seasonal_residual.py data/processed/metr-la-828dd9de4670.npz results/tables/day008_seasonal_results.csv
+python analysis/day008_district_evaluation.py . results/tables/day008_district_results.csv
+python analysis/day008_budget_analysis.py . results/tables/day008_budget_results.csv
+```

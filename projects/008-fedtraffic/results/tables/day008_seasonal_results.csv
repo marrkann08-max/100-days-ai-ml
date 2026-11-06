@@ -1,0 +1,4 @@
+horizon_minutes,lookback_steps,residual_weight,val_seasonal_mae,val_hybrid_mae,test_seasonal_mae,test_hybrid_mae,test_observations
+15,3,0.80,4.320041,3.178537,4.196371,3.369698,413051
+30,3,0.65,4.315139,3.599505,4.196421,3.762751,413045
+60,3,0.45,4.304280,3.988747,4.196677,4.103859,413033
