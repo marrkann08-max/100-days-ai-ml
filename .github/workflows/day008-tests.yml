@@ -1,0 +1,36 @@
+name: day-008 tests
+
+on:
+  push:
+    paths: ["projects/008-fedtraffic/**", ".github/workflows/day008-tests.yml"]
+  pull_request:
+    paths: ["projects/008-fedtraffic/**", ".github/workflows/day008-tests.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: projects/008-fedtraffic
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install CPU PyTorch and test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install torch==2.15.0 --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install "numpy>=2.2,<3" "pyyaml>=6,<7"
+      # The METR-LA data is not committed; tests that need it skip themselves.
+      - name: Unit tests
+        run: python -m unittest discover -s tests -v

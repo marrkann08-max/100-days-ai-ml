@@ -6,6 +6,7 @@
     python -m fedtraffic.experiments privacy        # RQ5: accuracy cost of differential privacy
     python -m fedtraffic.experiments benchmark_v2   # RQ6: seasonal-aware encoder, trained to convergence
     python -m fedtraffic.experiments federated_v2   # RQ7: personalised federated learning
+    python -m fedtraffic.experiments round2         # the round-2 runs reported (subset of the two above)
     python -m fedtraffic.experiments smoke          # tiny end-to-end check
 """
 import argparse
@@ -190,6 +191,22 @@ def federated_v2():
         federated_job(f"fedavg_seasonal_s{seed}", {**fed, "seed": seed}, group="federated_v2", timeout=5400)
 
 
+def round2():
+    """The round-2 runs actually carried out, most important first (a 3-hour compute window)."""
+    fed = {**SEASONAL, "federated.rounds": 40, "federated.personalise": True}
+    for model in ("last_value", "historical_average", "seasonal_residual"):
+        centralised("benchmark_v2", model, {"model.name": model})
+    centralised("benchmark_v2", "gconv_lstm_long_s0", {**LONG, "seed": 0})
+    centralised("benchmark_v2", "gconv_lstm_seasonal_s0", {**SEASONAL, "seed": 0})
+    centralised("benchmark_v2", "lstm_seasonal_s0", {**SEASONAL, "model.name": "lstm", "seed": 0})
+    for seed in (0, 1):
+        if seed:
+            centralised("benchmark_v2", f"gconv_lstm_seasonal_s{seed}", {**SEASONAL, "seed": seed})
+        local_only(f"local_only_seasonal_s{seed}", {**SEASONAL, "seed": seed}, group="federated_v2")
+        federated_job(f"fedavg_seasonal_s{seed}", {**fed, "seed": seed}, group="federated_v2", timeout=5400)
+    centralised("benchmark_v2", "gconv_lstm_seasonal_s2", {**SEASONAL, "seed": 2})
+
+
 def smoke():
     quick = {"train.epochs": 1, "data.train_stride": 60, "data.eval_stride": 60, "federated.rounds": 2}
     centralised("smoke", "gconv_gru", {**quick, "model.name": "gconv_gru"})
@@ -199,7 +216,7 @@ def smoke():
 def main():
     parser = argparse.ArgumentParser()
     groups = {"benchmark": benchmark, "federated": federated, "tradeoffs": tradeoffs, "privacy": privacy,
-              "benchmark_v2": benchmark_v2, "federated_v2": federated_v2, "smoke": smoke}
+              "benchmark_v2": benchmark_v2, "federated_v2": federated_v2, "round2": round2, "smoke": smoke}
     parser.add_argument("group", choices=tuple(groups))
     args = parser.parse_args()
     keep_awake()

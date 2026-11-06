@@ -7,3 +7,4 @@ experiments.log
 .flwr/
 deploy/logs/
 runs_discarded/*/checkpoint.pt
+experiments_v2.log
